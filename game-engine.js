@@ -20,8 +20,10 @@ const GameEngine = {
         bankDate: null,
         bankDateLocked: false,
         bankStatus: null, /* 🌟 記錄銀行狀態 */
-        appointmentTime: "2026-03-01 10:00", /* 🌟 已改為過去時間，方便測試 */
-        appointmentLocation: "台北市中山區某某路1號", /* 🌟 新增報到地址 */
+        
+        // 🌟 已將寫死的測試時間與地點拉掉，改為預設等待字樣，等待後台資料覆蓋
+        appointmentTime: "等待公會發布...", 
+        appointmentLocation: "等待公會發布...", 
         
         // 🌟 新增：分數細項記錄 (供大結局結算與彈窗判定用)
         scoreDetails: {

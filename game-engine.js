@@ -101,7 +101,7 @@ const GameEngine = {
         }
     },
 
-    // 🌟 新增：從後台抓取資料並同步介面
+    // 🌟 從後台抓取資料並同步介面
     fetchBackendData() {
         fetch(this.API_URL + "?id=" + this.state.sysId)
             .then(response => response.json())
@@ -109,19 +109,16 @@ const GameEngine = {
                 if (result.success) {
                     const data = result.data;
                     
-                    // 更新 DOM 基本資料 (覆寫預設值)
                     document.querySelectorAll('.dyn-company').forEach(el => el.innerText = data.companyName);
                     document.querySelectorAll('.dyn-team').forEach(el => el.innerText = data.team);
                     document.querySelectorAll('.dyn-type').forEach(el => el.innerText = data.type);
                     document.querySelectorAll('.dyn-name').forEach(el => el.innerText = data.userName);
                     
-                    // 同步後台核心時間與分數
                     this.state.appointmentTime = data.appointmentTime;
                     this.state.appointmentLocation = data.appointmentLocation;
                     this.state.score = data.totalScore;
                     this.state.scoreDetails = data.scoreDetails;
                     
-                    // 🌟 退件解封邏輯：若後台狀態為「退件」，則將關卡退回第2關完成狀態，讓第3關可重填
                     if (data.trial3Status === '退件' && this.state.currentTrial >= 3 && this.state.currentTrial < 6) {
                         this.state.currentTrial = 2;
                         this.state.location = '📁 裝備盤點';
@@ -132,12 +129,21 @@ const GameEngine = {
                     this.save();
                     this.updateUI();
                     
+                    // 🌟 判斷是否逾期，若逾期直接呼叫奪命連環閃！
+                    if (data.isDelayed) {
+                        this.showDelayWarning();
+                    }
+
                     // 觸發系統彈窗
                     if (data.systemAlert) {
-                        if (data.systemAlert === 'penalty') {
+                        if (data.systemAlert === 'penalty' && !this.state.hasSeenAlert) {
                             this.showSysAlert('danger', '⚠️ 系統通知', '任務遭遇挫折，積分有所減損！');
-                        } else if (data.systemAlert === 'bonus') {
+                            this.state.hasSeenAlert = true;
+                            this.save();
+                        } else if (data.systemAlert === 'bonus' && !this.state.hasSeenAlert) {
                             this.showSysAlert('reward', '✨ 系統通知', '表現優異！系統已發放效率獎勵積分！');
+                            this.state.hasSeenAlert = true;
+                            this.save();
                         }
                     }
                 }
@@ -145,9 +151,9 @@ const GameEngine = {
             .catch(error => console.error("API 讀取失敗:", error));
     },
 
-    // 🌟 新增：向後台發送更新資料
+    // 🌟 向後台發送更新資料
     syncToBackend(payload) {
-        if (!this.state.sysId) return; // 單機測試時不送
+        if (!this.state.sysId) return; 
         
         payload.id = this.state.sysId;
         payload.currentScore = this.state.scoreDetails.baseAndExplore; 
@@ -159,7 +165,6 @@ const GameEngine = {
         .then(res => res.json())
         .then(result => {
             if (result.success && result.newScoreData) {
-                // 更新為魔王大腦算好的最新分數
                 this.state.score = result.newScoreData.totalScore;
                 this.state.scoreDetails = result.newScoreData.scoreDetails;
                 this.save();
@@ -316,7 +321,6 @@ const GameEngine = {
             }
             this.save();
             this.updateUI();
-            // 上傳探索分數
             this.syncToBackend({}); 
             
             if (scoreGain > 0 && action !== 'random_weapon') { this.flashElement('score-text'); }
@@ -537,7 +541,6 @@ const GameEngine = {
         }
     },
 
-    // 🌟 檔案上傳模擬處理與同步後台
     handleFileUpload(inputElement, chkId) {
         const file = inputElement.files[0];
         if (!file) return;

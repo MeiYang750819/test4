@@ -44,11 +44,17 @@
             flex-shrink: 0; 
         }
 
-        .underline-text {
+        /* 🌟 修正「其他」輸入框，讓它跟文字對齊且有底線感 */
+        .other-input {
+            background: transparent;
+            border: none;
             border-bottom: 1px solid #8ab4f8;
-            min-width: 100px;
-            display: inline-block;
+            color: #efefef;
+            font-family: inherit;
+            font-size: 14px;
             margin-left: 5px;
+            width: 150px;
+            outline: none;
         }
 
         /* 超連結樣式優化 */
@@ -108,7 +114,7 @@
 
     <nav class="nav-tabs" style="top: 180px;">
         <a href="index.html" class="tab-btn">📜 冒險指南</a>
-        <a href="page2.html" class="tab-btn">🏹 鍛造秘笈</a>
+        <a href="page2.html" class="tab-btn">🏹 鍛秘笈</a>
         <a href="javascript:void(0)" onclick="location.reload();" class="tab-btn active">⚔️ 勇者試煉</a>
     </nav>
 
@@ -140,13 +146,13 @@
                 <span class="task-target">
                     📣 任務目標 <br>
                     　　- 確認現有證照與銀行帳戶<br>
-                    　　- 準備好實體文件，後續將上傳照片
+                    　　- 若無下列文件亦可直接確認
                 </span>
                 
-                <label class="check-item"><input type="checkbox"> 已備妥：台新國際商業銀行-實體存摺</label>
-                <label class="check-item"><input type="checkbox"> 已備妥：中餐證照 (若有)</label>
-                <label class="check-item"><input type="checkbox"> 已備妥：西餐證照 (若有)</label>
-                <label class="check-item">其他：<span class="underline-text"></span></label>
+                <label class="check-item"><input type="checkbox"> 台新國際商業銀行-實體存摺</label>
+                <label class="check-item"><input type="checkbox"> 中餐證照</label>
+                <label class="check-item"><input type="checkbox"> 西餐證照</label>
+                <label class="check-item">其他：<input type="text" class="other-input"></label>
                 
                 <div class="action-center">
                     <button class="btn-confirm" id="btn-trial-2" onclick="GameEngine.completeTrial(event, 2)">🚀 提交本關任務</button>
@@ -160,11 +166,11 @@
             <div class="details-body">
                 <span class="task-target">
                     📣 任務目標 <br>
-                    　　- 上傳入職必備文件圖檔<br>
+                    　　- 上傳入職五大必備文件<br>
                     　　- 確實填寫並追蹤體檢進度
                 </span>
                 
-                <label class="check-item"><input type="checkbox" class="chk-trial3" id="chk-t3-1"> [必備] 經認證醫療機構 -勞工體格檢查報告</label>
+                <label class="check-item"><input type="checkbox" class="chk-trial3" id="chk-t3-1"> 經認證醫療機構 -勞工體格檢查報告</label>
                 <div class="upload-btn-group" style="padding-left: 24px; margin-top: -5px; margin-bottom: 15px;">
                     <label class="file-upload-btn">
                         📁 選擇檔案
@@ -173,7 +179,7 @@
                     <span class="upload-status">未上傳</span>
                 </div>
                 
-                <label class="check-item"><input type="checkbox" class="chk-trial3" id="chk-t3-2"> [必備] 經認證醫療機構 -食品從業人員體檢報告</label>
+                <label class="check-item"><input type="checkbox" class="chk-trial3" id="chk-t3-2"> 經認證醫療機構 -食品從業人員體檢報告</label>
                 <div class="upload-btn-group" style="padding-left: 24px; margin-top: -5px; margin-bottom: 15px;">
                     <label class="file-upload-btn">
                         📁 選擇檔案
@@ -182,16 +188,9 @@
                     <span class="upload-status">未上傳</span>
                 </div>
 
-                <label class="check-item"><input type="checkbox" class="chk-trial3" id="chk-t3-3"> [必備] 台新國際商業銀行-實體存摺</label>
-                <div class="upload-btn-group" style="padding-left: 24px; margin-top: -5px; margin-bottom: 15px;">
-                    <label class="file-upload-btn">
-                        📁 選擇檔案
-                        <input type="file" class="file-upload-input" accept="image/*,.pdf" onchange="GameEngine.handleFileUpload(this, 'chk-t3-3')">
-                    </label>
-                    <span class="upload-status">未上傳</span>
-                </div>
+                <label class="check-item"><input type="checkbox" class="chk-trial3" id="chk-t3-3"> 兩吋照片一張</label>
 
-                <label class="check-item"><input type="checkbox" id="chk-t3-opt1"> [選填] 前份工作健保轉出證明 (新鮮人免附)</label>
+                <label class="check-item"><input type="checkbox" id="chk-t3-opt1"> 前份工作健保轉出證明 -新鮮人免附</label>
                 <div class="upload-btn-group" style="padding-left: 24px; margin-top: -5px; margin-bottom: 15px;">
                     <label class="file-upload-btn">
                         📁 選擇檔案
@@ -200,7 +199,7 @@
                     <span class="upload-status">未上傳</span>
                 </div>
 
-                <label class="check-item"><input type="checkbox" id="chk-t3-opt2"> [選填] 前份工作離職證明 (新鮮人免附)</label>
+                <label class="check-item"><input type="checkbox" id="chk-t3-opt2"> 前份工作離職證明 -新鮮人免附</label>
                 <div class="upload-btn-group" style="padding-left: 24px; margin-top: -5px; margin-bottom: 15px;">
                     <label class="file-upload-btn">
                         📁 選擇檔案
@@ -237,7 +236,7 @@
                 </div>
 
                 <label class="check-item"><input type="checkbox" class="chk-trial4"> 確認當日服裝儀容規範</label>
-                <label class="check-item"><input type="checkbox" class="chk-trial4"> 兩吋照片與五大正本文件夾已備妥</label>
+                <label class="check-item"><input type="checkbox" class="chk-trial4"> 五大正本文件夾已備妥</label>
                 <label class="check-item"><input type="checkbox" class="chk-trial4"> 確認報到時間與地點</label>
 
                 <div class="action-center"><button class="btn-confirm" id="btn-trial-4" onclick="checkTrial4(event)">🚀 提交本關任務</button></div>
@@ -309,18 +308,18 @@
         
         function checkTrial1(e) { if (!document.getElementById('chk-guide').checked || !document.getElementById('chk-forge').checked || !document.getElementById('chk-risk').checked) { alert("⚠️ 勇主請注意\n必須勾選所有確認項目，才能推進！"); return; } GameEngine.completeTrial(e, 1); }
         
+        /* 🌟 第三關審核邏輯：前兩項需上傳並打勾，第三項僅需打勾 */
         function checkTrial3(e) { 
             const chks = document.querySelectorAll('.chk-trial3'); 
             let all = true; 
             chks.forEach(c => { if(!c.checked) all = false; }); 
-            if (!all) { alert("⚠️ 勇主請注意\n必須上傳並勾選所有 [必備] 項目，才能推進！"); return; } 
+            if (!all) { alert("⚠️ 勇主請注意\n必須完成並勾選所有必要項目，才能推進！"); return; } 
             GameEngine.completeTrial(e, 3); 
         }
         
         function checkTrial4(e) { const chks = document.querySelectorAll('.chk-trial4'); let all = true; chks.forEach(c => { if(!c.checked) all = false; }); if (!all) { alert("⚠️ 勇主請注意\n必須勾選所有確認項目，才能推進！"); return; } GameEngine.completeTrial(e, 4); }
         function checkTrial5(e) { const chks = document.querySelectorAll('.chk-trial5'); let all = true; chks.forEach(c => { if(!c.checked) all = false; }); if (!all) { alert("⚠️ 勇主請注意\n必須勾選所有確認項目，才能推進！"); return; } GameEngine.completeTrial(e, 5); }
 
-        /* 🌟 單選霸道防呆邏輯 */
         function checkBankLogic(clickedEl, statusType) {
             if (clickedEl.checked) {
                 GameEngine.state.bankStatus = statusType;
@@ -328,10 +327,9 @@
                 GameEngine.state.bankStatus = null;
             }
             GameEngine.save();
-            GameEngine.updateButtonStyles(); // 即刻刷新封印狀態
+            GameEngine.updateButtonStyles(); 
         }
 
-        /* 🌟 第六關最終決斷邏輯 */
         function checkTrial6(e) { 
             const status = GameEngine.state.bankStatus;
             if (!status) { 
@@ -339,7 +337,6 @@
                 return; 
             } 
             
-            // 若為「申辦中」，僅記錄不封印關卡
             if (status === 'process') {
                 const bDate = document.getElementById('input-bank-date').value;
                 if (!bDate && !GameEngine.state.bankDateLocked) {
@@ -350,7 +347,6 @@
                 return; 
             }
 
-            // 若為「已有」或「辦理完成」，進入大結局
             GameEngine.completeTrial(e, 6); 
         }
     </script>

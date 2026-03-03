@@ -6,7 +6,7 @@
    ================================================================ */
 const GameEngine = {
     // 🌟 您專屬的 API 連線網址
-    API_URL: "https://script.google.com/macros/s/AKfycby19o1HnJiql5qvKsVJN_DVIslSUDA3tmXw-7eBzQUNSx29UlIiG0sV92dQabWNgZ2EPg/exec",
+    API_URL: "https://script.google.com/macros/s/AKfycbwQp1nj6f1UieZliPx7GeCEgyJN8IAmcsp02xpsxGOUki5W8aE4RtUlOvfgfRY8YIOsAw/exec",
 
     state: {
         sysId: null, // 系統編號 (由 URL 取得)

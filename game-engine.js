@@ -116,8 +116,8 @@ const GameEngine = {
                     
                     this.state.appointmentTime = data.appointmentTime;
                     this.state.appointmentLocation = data.appointmentLocation;
-                    this.state.score = data.totalScore;
-                    this.state.scoreDetails = data.scoreDetails;
+                    this.state.score = data.totalScore || 0; // 防呆處理
+                    this.state.scoreDetails = data.scoreDetails || { baseAndExplore: 0, penalty: 0, bonus: 0, hrEval: 0 };
                     
                     if (data.trial3Status === '退件' && this.state.currentTrial >= 3 && this.state.currentTrial < 6) {
                         this.state.currentTrial = 2;
@@ -146,9 +146,16 @@ const GameEngine = {
                             this.save();
                         }
                     }
+                } else {
+                     console.error("API 讀取失敗，後端回傳：", result.error);
+                     // 即使後端報錯，仍強制渲染預設 UI，避免卡死在載入中
+                     this.updateUI();
                 }
             })
-            .catch(error => console.error("API 讀取失敗:", error));
+            .catch(error => {
+                console.error("API 網路請求失敗:", error);
+                this.updateUI();
+            });
     },
 
     // 🌟 向後台發送更新資料
@@ -165,8 +172,8 @@ const GameEngine = {
         .then(res => res.json())
         .then(result => {
             if (result.success && result.newScoreData) {
-                this.state.score = result.newScoreData.totalScore;
-                this.state.scoreDetails = result.newScoreData.scoreDetails;
+                this.state.score = result.newScoreData.totalScore || 0;
+                this.state.scoreDetails = result.newScoreData.scoreDetails || { baseAndExplore: 0, penalty: 0, bonus: 0, hrEval: 0 };
                 this.save();
                 this.updateUI();
             }
@@ -507,6 +514,12 @@ const GameEngine = {
 
         this.syncToBackend(payload);
 
+        // 🌟 自動收合當前過關的詳細選單 (保留使用者可自行展開)
+        const currentDetails = document.getElementById(`detail-trial-${trialNum}`);
+        if (currentDetails) {
+            currentDetails.removeAttribute('open');
+        }
+
         if (trialNum === 6) {
             setTimeout(() => {
                 this.showFinalAchievement(true); 
@@ -537,6 +550,7 @@ const GameEngine = {
                 this.flashElement('loc-text');
                 this.flashElement('prog-val');
                 if (trialNum !== 5) this.flashElement('score-text');
+                
             }, 3000);
         }
     },
@@ -719,7 +733,7 @@ const GameEngine = {
                         const inputs = detailsBlock.querySelectorAll('input');
                         inputs.forEach(input => {
                             input.disabled = true;
-                            if(input.type === 'checkbox' || input.type === 'radio' || input.type === 'file') {
+                            if(input.type === 'checkbox' || input.type === 'radio' || input.type === 'file' || input.type === 'text') {
                                 input.style.opacity = "0.5";
                                 input.style.cursor = "not-allowed";
                             }

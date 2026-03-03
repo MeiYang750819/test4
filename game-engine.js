@@ -129,23 +129,33 @@ const GameEngine = {
                     this.save();
                     this.updateUI();
                     
-                    // 🌟 判斷是否逾期，若逾期直接呼叫奪命連環閃！
-                    if (data.isDelayed) {
+                    let alertTriggered = false;
+
+                    // 🌟 觸發系統彈窗 (並綁定關閉後的回呼函數)
+                    if (data.systemAlert) {
+                        if (data.systemAlert === 'penalty' && !this.state.hasSeenAlert) {
+                            alertTriggered = true;
+                            this.state.hasSeenAlert = true;
+                            this.save();
+                            // 等彈窗關閉後，再判斷是否要呼叫奪命連環閃
+                            this.showSysAlert('danger', '⚠️ 系統通知', '任務遭遇挫折，積分有所減損！', () => {
+                                if (data.isDelayed) this.showDelayWarning();
+                            });
+                        } else if (data.systemAlert === 'bonus' && !this.state.hasSeenAlert) {
+                            alertTriggered = true;
+                            this.state.hasSeenAlert = true;
+                            this.save();
+                            this.showSysAlert('reward', '✨ 系統通知', '表現優異！系統已發放效率獎勵積分！', () => {
+                                if (data.isDelayed) this.showDelayWarning();
+                            });
+                        }
+                    }
+                    
+                    // 🌟 若沒有觸發彈窗，但有逾期，則直接呼叫奪命連環閃
+                    if (!alertTriggered && data.isDelayed) {
                         this.showDelayWarning();
                     }
 
-                    // 觸發系統彈窗
-                    if (data.systemAlert) {
-                        if (data.systemAlert === 'penalty' && !this.state.hasSeenAlert) {
-                            this.showSysAlert('danger', '⚠️ 系統通知', '任務遭遇挫折，積分有所減損！');
-                            this.state.hasSeenAlert = true;
-                            this.save();
-                        } else if (data.systemAlert === 'bonus' && !this.state.hasSeenAlert) {
-                            this.showSysAlert('reward', '✨ 系統通知', '表現優異！系統已發放效率獎勵積分！');
-                            this.state.hasSeenAlert = true;
-                            this.save();
-                        }
-                    }
                 } else {
                      console.error("API 讀取失敗，後端回傳：", result.error);
                      // 即使後端報錯，仍強制渲染預設 UI，避免卡死在載入中
@@ -201,6 +211,22 @@ const GameEngine = {
                 box-shadow: 0 5px 15px rgba(0,0,0,0.5); font-weight: bold;
             }
             .game-toast.show { right: 20px; }
+            
+            /* 🌟 恢復原始奪命連環閃的 CSS 設定 (閃三次後靜止) */
+            #delay-warning-overlay {
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.9); z-index: 10005; display: flex;
+                flex-direction: column; align-items: center; justify-content: center;
+                opacity: 0; pointer-events: none; transition: opacity 0.3s;
+            }
+            #delay-warning-overlay.active { opacity: 1; pointer-events: all; }
+            .warning-text { color: #ef4444; font-size: 20px; font-weight: bold; margin-top: 20px; opacity: 0; transition: opacity 1s; }
+            .warning-text.show { opacity: 1; }
+            @keyframes heavyFlash { 
+                0% { opacity: 1; transform: scale(1); filter: brightness(1); } 
+                50% { opacity: 0; transform: scale(1.5); filter: brightness(2); } 
+                100% { opacity: 1; transform: scale(1); filter: brightness(1); } 
+            }
         `;
         document.head.appendChild(style);
     },
@@ -237,16 +263,24 @@ const GameEngine = {
         return false;
     },
 
+    // 🌟 延宕奪命連環閃警告動畫 (結合 CSS 閃三次後變靜態)
     showDelayWarning() {
         if(document.getElementById('delay-warning-overlay')) return;
         const overlay = document.createElement('div');
         overlay.id = 'delay-warning-overlay';
-        overlay.innerHTML = `<div class="warning-icon">⚠️ 警告</div><div class="warning-text">進度延宕，冒險積分持續流失中..</div>`;
+        // 直接在 icon 上綁定 heavyFlash 動畫 (0.5秒閃1次，共3次)
+        overlay.innerHTML = `<div class="warning-icon" style="font-size: 80px; animation: heavyFlash 0.5s 3;">⚠️ 警告</div><div class="warning-text">進度延宕，冒險積分持續流失中..</div>`;
         document.body.appendChild(overlay);
+        
         void overlay.offsetWidth;
         overlay.classList.add('active');
+        
         setTimeout(() => { overlay.querySelector('.warning-text').classList.add('show'); }, 1500); 
-        overlay.onclick = () => { overlay.classList.remove('active'); setTimeout(() => overlay.remove(), 300); };
+        
+        overlay.onclick = () => {
+            overlay.classList.remove('active');
+            setTimeout(() => overlay.remove(), 300);
+        };
     },
 
     checkSystemAlerts() {
@@ -265,18 +299,27 @@ const GameEngine = {
         }
     },
 
-    showSysAlert(type, titleText, msgText) {
+    // 🌟 修改彈窗函數，支援傳入關閉後的回呼函數 (Callback)
+    showSysAlert(type, titleText, msgText, onCloseCallback) {
         const modalId = 'sys-alert-' + Date.now();
         const html = `
             <div class="sys-alert-modal active" id="${modalId}">
                 <div class="sys-alert-box ${type}">
                     <div class="sys-alert-title ${type}">${titleText}</div>
                     <div class="sys-alert-text">${msgText}</div>
-                    <button class="sys-alert-btn" onclick="document.getElementById('${modalId}').remove()">我知道了</button>
+                    <button class="sys-alert-btn" id="btn-${modalId}">我知道了</button>
                 </div>
             </div>
         `;
         document.body.insertAdjacentHTML('beforeend', html);
+        
+        // 綁定點擊事件，關閉後執行 callback
+        document.getElementById(`btn-${modalId}`).onclick = () => {
+            document.getElementById(modalId).remove();
+            if (typeof onCloseCallback === 'function') {
+                onCloseCallback();
+            }
+        };
     },
 
     unlock(event, id, action) {
@@ -514,7 +557,7 @@ const GameEngine = {
 
         this.syncToBackend(payload);
 
-        // 🌟 自動收合當前過關的詳細選單 (保留使用者可自行展開)
+        // 🌟 自動收合當前過關的詳細選單
         const currentDetails = document.getElementById(`detail-trial-${trialNum}`);
         if (currentDetails) {
             currentDetails.removeAttribute('open');

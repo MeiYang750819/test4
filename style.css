@@ -475,3 +475,37 @@ details details { box-shadow: none; margin-bottom: 0; border-radius: 0; border: 
 .eval-text { color: #4ade80; margin-top: 20px; line-height: 1.6; }
 /* 🌟 微調嘲諷字體顏色為較淺的珊瑚紅 */
 .mockery-text { color: #ff8a8a; margin-top: 20px; font-weight: bold; border-top: 1px dashed #555; padding-top: 15px; line-height: 1.6; }
+
+/* 🌟 強提醒彈窗專用樣式 */
+.sys-alert-modal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8); z-index: 10005; display: none;
+    align-items: center; justify-content: center; padding: 20px;
+}
+.sys-alert-modal.active { display: flex; }
+.sys-alert-box {
+    background: #1a1a1a; border-radius: 8px; padding: 25px;
+    width: 100%; max-width: 320px; text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+}
+.sys-alert-box.danger { border: 2px solid #ef4444; }
+.sys-alert-box.reward { border: 2px solid #fbbf24; }
+.sys-alert-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.sys-alert-title.danger { color: #ef4444; }
+.sys-alert-title.reward { color: #fbbf24; }
+.sys-alert-text { color: #efefef; font-size: 15px; margin-bottom: 20px; line-height: 1.5; }
+.sys-alert-btn {
+    padding: 8px 20px; background: #333; color: #fff; border: none; border-radius: 4px;
+    cursor: pointer; font-size: 14px; transition: 0.3s;
+}
+.sys-alert-btn:hover { background: #555; }
+
+/* 🌟 上傳按鈕專用樣式 */
+.upload-btn-group { display: flex; align-items: center; gap: 10px; margin-top: 5px; margin-bottom: 10px; }
+.file-upload-btn {
+    background: #2d3748; color: #8ab4f8; border: 1px solid #8ab4f8;
+    padding: 6px 12px; border-radius: 4px; font-size: 13px; cursor: pointer; transition: 0.3s;
+}
+.file-upload-btn:hover { background: #8ab4f8; color: #000; }
+.file-upload-input { display: none; }
+.upload-status { font-size: 13px; color: #a0a0a0; }
+.upload-status.success { color: #4ade80; font-weight: bold; }

@@ -21,7 +21,16 @@ const GameEngine = {
         bankDateLocked: false,
         bankStatus: null, /* 🌟 記錄銀行狀態 */
         appointmentTime: "2026-03-01 10:00", /* 🌟 已改為過去時間，方便測試 */
-        appointmentLocation: "等待公會發布..."
+        appointmentLocation: "台北市中山區某某路1號", /* 🌟 新增報到地址 */
+        
+        // 🌟 新增：分數細項記錄 (供大結局結算與彈窗判定用)
+        scoreDetails: {
+            baseAndExplore: 0,
+            penalty: 0,
+            bonus: 0,
+            hrEval: 0
+        },
+        hasSeenAlert: false // 防止重新整理無限跳警告
     },
 
     ranks: [
@@ -65,6 +74,9 @@ const GameEngine = {
         if (window.location.search.includes('delay=1')) {
             setTimeout(() => this.showDelayWarning(), 500);
         }
+
+        // 🌟 檢查是否需要跳出強提醒彈窗 (模擬從後台取得資料後的判定)
+        this.checkSystemAlerts();
 
         // 🌟 成就回顧機制：若已破關，重整網頁時直接顯示結算面板 (不放煙火)
         if (this.state.currentTrial >= 6) {
@@ -151,6 +163,40 @@ const GameEngine = {
         };
     },
 
+    // 🌟 強提醒彈窗系統 (模擬判定)
+    checkSystemAlerts() {
+        if (this.state.hasSeenAlert) return;
+
+        // 這裡未來會從 GAS 取得實際扣分/加分狀態。目前用模擬邏輯。
+        // 假設如果網址有帶 ?alert=penalty 則跳扣分，帶 ?alert=bonus 則跳加分
+        const urlParams = new URLSearchParams(window.location.search);
+        const alertType = urlParams.get('alert');
+
+        if (alertType === 'penalty') {
+            this.showSysAlert('danger', '⚠️ 系統通知', '任務遭遇挫折，積分有所減損！');
+            this.state.hasSeenAlert = true;
+            this.save();
+        } else if (alertType === 'bonus') {
+            this.showSysAlert('reward', '✨ 系統通知', '表現優異！系統已發放效率獎勵積分！');
+            this.state.hasSeenAlert = true;
+            this.save();
+        }
+    },
+
+    showSysAlert(type, titleText, msgText) {
+        const modalId = 'sys-alert-' + Date.now();
+        const html = `
+            <div class="sys-alert-modal active" id="${modalId}">
+                <div class="sys-alert-box ${type}">
+                    <div class="sys-alert-title ${type}">${titleText}</div>
+                    <div class="sys-alert-text">${msgText}</div>
+                    <button class="sys-alert-btn" onclick="document.getElementById('${modalId}').remove()">我知道了</button>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', html);
+    },
+
     // 💰 解鎖機制 (大摺疊、小摺疊、隱藏武器、防具彩蛋)
     unlock(event, id, action) {
         if (this.state.achievements.includes(id)) return;
@@ -189,6 +235,8 @@ const GameEngine = {
 
         setTimeout(() => {
             this.state.score += scoreGain;
+            this.state.scoreDetails.baseAndExplore += scoreGain; // 記錄細項
+            
             if (action === 'explore_armor') {
                 if (this.upgradeArmor()) doFlashItem = true;
             } else if (action === 'random_weapon') {
@@ -220,6 +268,7 @@ const GameEngine = {
             this.createFloatingText(event, `+${scoreGain}`);
             this.state.achievements.push(id);
             this.state.score += scoreGain;
+            this.state.scoreDetails.baseAndExplore += scoreGain;
             this.save();
             setTimeout(() => {
                 this.updateUI();
@@ -229,6 +278,7 @@ const GameEngine = {
             // 反悔取消打勾時，扣回分數
             this.state.achievements = this.state.achievements.filter(a => a !== id);
             this.state.score -= scoreGain;
+            this.state.scoreDetails.baseAndExplore -= scoreGain;
             this.save();
             this.updateUI();
             this.flashElement('score-text');
@@ -292,6 +342,9 @@ const GameEngine = {
         this.updateDateControls();
         const timeEl = document.getElementById('dyn-apt-time');
         if (timeEl) timeEl.innerText = this.state.appointmentTime;
+        const locEl = document.getElementById('dyn-apt-loc');
+        if (locEl) locEl.innerText = this.state.appointmentLocation;
+        
         this.updateButtonStyles();
     },
 
@@ -393,6 +446,7 @@ const GameEngine = {
             setTimeout(() => {
                 if (trialNum !== 5) {
                     this.state.score += tData.scoreGain;
+                    this.state.scoreDetails.baseAndExplore += tData.scoreGain;
                 }
                 
                 let doFlashItem = false;
@@ -410,7 +464,30 @@ const GameEngine = {
         }
     },
 
-    // 🌟 史詩級大結局演出腳本 (支援重播模式)
+    // 🌟 檔案上傳模擬處理
+    handleFileUpload(inputElement, chkId) {
+        const file = inputElement.files[0];
+        if (!file) return;
+
+        const statusSpan = inputElement.parentElement.querySelector('.upload-status');
+        const chkBox = document.getElementById(chkId);
+        
+        statusSpan.innerText = "⏳ 上傳中...";
+        statusSpan.classList.remove('success');
+
+        // 模擬上傳延遲 1.5 秒
+        setTimeout(() => {
+            statusSpan.innerText = "✅ 已上傳";
+            statusSpan.classList.add('success');
+            if (chkBox) {
+                chkBox.checked = true;
+                // 不自動鎖死，讓同仁仍可操作
+            }
+            // 這裡未來會接 GAS 傳送檔案的邏輯
+        }, 1500);
+    },
+
+    // 🌟 史詩級大結局演出腳本 (支援重播模式與分數細項)
     showFinalAchievement(withFirework = true) {
         const rank = this.ranks.find(r => this.state.score >= r.min) || this.ranks[this.ranks.length - 1];
         
@@ -438,10 +515,23 @@ const GameEngine = {
         // 🌟 嘲諷顏色調淡 (#ff8a8a)
         let mockeryHTML = !hasWeapon ? `<div class="fade-in-row mockery-text" style="animation: fadeUpIn 0.8s forwards 3.3s;">📝 系統額外判定：<br>勇者雖已通關，但未詳閱《鍛造秘笈》，<br>仍全程赤手空拳完成試煉...敬佩！敬佩！</div>` : "";
 
-        // 渲染結算面板的 HTML 結構 (綁定點擊背景關閉)
+        // 渲染結算面板的 HTML 結構 (綁定點擊背景關閉與分數明細)
         const renderModal = () => {
             if(document.getElementById('final-achievement-modal')) document.getElementById('final-achievement-modal').remove();
             
+            // 這裡的分數細項，之後會由 GAS 傳來的真實數據取代
+            const baseScore = this.state.scoreDetails.baseAndExplore;
+            const penalty = this.state.scoreDetails.penalty;
+            const hrEval = this.state.scoreDetails.hrEval;
+            
+            let detailHtml = `
+                <div style="font-size: 13px; color: #888; margin-left: 10px; margin-top: 5px; line-height: 1.4;">
+                    └ 基礎與探索得分：${baseScore} 分<br>
+            `;
+            if (penalty < 0) detailHtml += `└ 鑑定所或逾期扣分：<span style="color:#ff8a8a;">${penalty} 分</span><br>`;
+            if (hrEval !== 0) detailHtml += `└ 人資綜合評估：<span style="${hrEval > 0 ? 'color:#4ade80;' : 'color:#ff8a8a;'}">${hrEval > 0 ? '+'+hrEval : hrEval} 分</span><br>`;
+            detailHtml += `</div>`;
+
             const modal = document.createElement('div');
             modal.id = 'final-achievement-modal';
             modal.innerHTML = `
@@ -455,7 +545,10 @@ const GameEngine = {
                     </div>
                     <div style="margin-top: 30px;">
                         <div class="fade-in-row" style="animation: fadeUpIn 0.8s forwards 1.8s;"><strong>🏆 最終戰力評級：</strong>${fullRankTitle}</div>
-                        <div class="fade-in-row" style="animation: fadeUpIn 0.8s forwards 2.1s;"><strong>💯 冒險總積分：</strong>${this.state.score} 分</div>
+                        <div class="fade-in-row" style="animation: fadeUpIn 0.8s forwards 2.1s;">
+                            <strong>💯 冒險總積分：</strong>${this.state.score} 分
+                            ${detailHtml}
+                        </div>
                         <div class="fade-in-row" style="animation: fadeUpIn 0.8s forwards 2.4s;"><strong>✅ 試煉完成度：</strong>${currentProg}</div>
                         <div class="fade-in-row" style="animation: fadeUpIn 0.8s forwards 2.7s;"><strong>🛡️ 最終裝備：</strong>${finalEquip}</div>
                         
@@ -529,10 +622,17 @@ const GameEngine = {
                         const inputs = detailsBlock.querySelectorAll('input');
                         inputs.forEach(input => {
                             input.disabled = true;
-                            if(input.type === 'checkbox' || input.type === 'radio') {
+                            if(input.type === 'checkbox' || input.type === 'radio' || input.type === 'file') {
                                 input.style.opacity = "0.5";
                                 input.style.cursor = "not-allowed";
                             }
+                        });
+                        // 鎖定上傳按鈕外觀
+                        const uploadBtns = detailsBlock.querySelectorAll('.file-upload-btn');
+                        uploadBtns.forEach(uBtn => {
+                            uBtn.style.opacity = "0.5";
+                            uBtn.style.cursor = "not-allowed";
+                            uBtn.style.pointerEvents = "none";
                         });
                     }
 
@@ -545,7 +645,7 @@ const GameEngine = {
                 }
             }
             
-            // 🌟 關卡順序防偷跑解鎖邏輯
+            // 🌟 關卡順序防偷跑解鎖邏輯 (不再預設展開第一關)
             if (detailsBlock) {
                 if (n === 1) {
                     detailsBlock.classList.remove('locked-details');

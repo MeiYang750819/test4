@@ -2,7 +2,7 @@
 /* <======== 檔案用途：遊戲核心邏輯與狀態管理 ======== > */
 
 const GameEngine = {
-    API_URL: "https://script.google.com/macros/s/AKfycbyzi8oHumX5UFx3jTu78zA2n_IBrIEWpGKAiTX7cMkARSj5ZCW1xN06Ie7KB0J5exKuSA/exec",
+    API_URL: "https://script.google.com/macros/s/AKfycbzXxgVI6YQUBVFAXJYagboSIe_E1SgfndTTBEUmzm7b1t0NBw7oKRMvcLyEBkaGZBVeOQ/exec",
 
     state: {
         sysId: null,

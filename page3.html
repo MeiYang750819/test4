@@ -5,165 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>💼 勇者入職試煉</title>
 
-    <meta property="og:title" content="🛠️｜MYs系統｜新手村登入區" />
-    <meta property="og:description" content="闖關冒險即將開始！詳閱任務指南並完成關卡，解鎖職場新身分！" />
-    <meta property="og:image" content="https://meiyang750819.github.io/test4/assets/img1/MYs_logo_去背1.png" />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://meiyang750819.github.io/test4/" />
-
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="nav.css">
     
     <script src="game-engine.js"></script>
 
-
     <style>
-        .details-body {
-            white-space: normal !important; 
-            color: #b0b0b0; 
-        }
-
-        /* 🎯 任務目標標題 */
-        .task-target {
-            color: #cccccc; 
-            font-weight: bold;
-            display: block;
-            margin-bottom: 15px; 
-            line-height: 1.6;
-        }
-
-        /* ⚔️ 核取項目樣式 */
-        .check-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 12px; 
-            cursor: pointer;
-            font-size: 14px;
-            color: #a0a0a0; 
-        }
-
-        .check-item input[type="checkbox"] {
-            margin-right: 10px; 
-            width: 18px;
-            height: 18px;
-            flex-shrink: 0; 
-        }
-
-        /* ✍️ 「其他」輸入框底線樣式 */
-        .other-input {
-            background: transparent;
-            border: none;
-            border-bottom: 1px solid #8ab4f8;
-            color: #efefef;
-            font-family: inherit;
-            font-size: 14px;
-            margin-left: 5px;
-            width: 160px;
-            outline: none;
-            padding: 2px 5px;
-        }
-
-        /* 🕒 體檢與日期追蹤框 */
-        .tracking-box { 
-            background: rgba(0,0,0,0.3); 
-            padding: 22px; 
-            border-radius: 10px; 
-            border: 1px dashed #555;
-            margin: 25px 0;
-        }
-
-        .tracking-header { 
-            text-align: center; 
-            display: block; 
-            margin-bottom: 18px; 
-            font-weight: bold; 
-            color: #cccccc; 
-            letter-spacing: 1px;
-        }
-
-        .date-row { 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-            margin-bottom: 18px; 
-            gap: 12px; 
-        }
-        
-        /* 🔒 鎖定按鈕樣式 */
-        .btn-lock { 
-            background: #232a35; 
-            color: rgba(255, 255, 255, 0.7); 
-            border: 1px solid #4ade80; 
-            padding: 8px 14px; 
-            border-radius: 4px; 
-            font-size: 13px; 
-            cursor: pointer; 
-            flex: 1; 
-            transition: 0.3s; 
-            white-space: nowrap; 
-        }
-
-        .btn-lock:hover { 
-            background: #4ade80; 
-            color: #000; 
-        }
-
-        .btn-lock:disabled { 
-            opacity: 0.4; 
-            cursor: not-allowed; 
-            border-color: #555; 
-        }
-        
-        /* 🚀 提交按鈕 */
-        .btn-confirm { 
-            width: 100%; 
-            padding: 14px; 
-            background: #2d3748; 
-            color: #4ade80; 
-            font-weight: bold; 
-            font-size: 16px; 
-            border: 1px solid #4ade80; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            letter-spacing: 2px; 
-            transition: all 0.3s ease; 
-            margin-top: 10px;
-        }
-
-        /* 📱 行動裝置微調 */
-        @media (max-width: 480px) {
-            .date-row input[type="date"], .date-row input[type="text"] { flex: 2; }
-            .btn-lock { flex: 1; font-size: 12px; padding: 8px 10px; }
-        }
+        .details-body { white-space: normal !important; color: #b0b0b0; }
+        .task-target { color: #cccccc; font-weight: bold; display: block; margin-bottom: 12px; }
+        .check-item { display: flex; align-items: center; margin-bottom: 10px; cursor: pointer; font-size: 14px; color: #a0a0a0; }
+        .check-item input[type="checkbox"] { margin-right: 8px; width: 16px; height: 16px; flex-shrink: 0; }
+        .other-input { background: transparent; border: none; border-bottom: 1px solid #8ab4f8; color: #efefef; font-size: 14px; margin-left: 5px; width: 150px; outline: none; }
+        .tracking-box { background: rgba(0,0,0,0.2); padding: 20px; border-radius: 8px; border: 1px dashed #555; margin: 20px 0; }
+        .date-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; gap: 10px; }
+        .btn-lock { background: #232a35; color: rgba(255, 255, 255, 0.7); border: 1px solid #4ade80; padding: 8px 12px; border-radius: 4px; font-size: 14px; cursor: pointer; transition: 0.3s; }
+        .btn-confirm { width: 100%; padding: 12px; background: #2d3748; color: #4ade80; font-weight: bold; border: 1px solid #4ade80; border-radius: 6px; cursor: pointer; }
     </style>
 </head>
-
 
 <body class="page-3">
 
     <div class="sticky-bar" id="block-identity">
-        <span class="dyn-company">載入中...</span>　｜　
-        <span class="dyn-team">載入中...</span>　｜　
-        <span class="dyn-type">載入中...</span>　｜　
-        <span class="dyn-name">載入中...</span>
+        <span class="dyn-company">載入中...</span>　｜　<span class="dyn-team">載入中...</span>　｜　<span class="dyn-type">載入中...</span>　｜　<span class="dyn-name">載入中...</span>
     </div>
 
-    <div class="sticky-bar" id="block-status-1" style="top: 45px;">
-        <span id="rank-text">載入中...</span>
-    </div>
-
-    <div class="sticky-bar" id="block-status-2" style="top: 90px;">
-        <span id="status-tag">載入中...</span>
-    </div>
+    <div class="sticky-bar" id="block-status-1" style="top: 45px;"><span id="rank-text">載入中...</span></div>
+    <div class="sticky-bar" id="block-status-2" style="top: 90px;"><span id="status-tag">載入中...</span></div>
 
     <div class="sticky-bar" id="block-status-3" style="top: 135px;">
         <span style="color:#ff8a8a;">🏆 冒險積分：</span><span id="score-text">0分</span>
         <div class="progress-track"><div class="progress-fill" id="score-fill" style="width: 0%;"></div></div>
-        　｜　
-        <span style="color:#ff8a8a;">⚔️ 攻略進度：</span><span id="prog-val">0%</span>
+        　｜　<span style="color:#ff8a8a;">⚔️ 攻略進度：</span><span id="prog-val">0%</span>
         <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width: 0%;"></div></div>
     </div>
-
 
     <nav class="nav-tabs" style="top: 180px;">
         <a href="index.html" class="tab-btn">📜 冒險指南</a>
@@ -172,239 +46,93 @@
     </nav>
 
 
-    <main class="tab-content active" style="margin-top: 235px;">
+    <main class="tab-content active" style="margin-top: 225px;">
 
         <details id="detail-trial-1">
             <summary class="main-summary">【新手報到】啟程點</summary>
             <div class="details-body">
-                <span class="task-target">
-                    📣 任務目標 <br>
-                    　　- 確認已詳閱入職規範<br>
-                    　　- 確保完全理解冒險指南內容
-                </span>
-                
+                <span class="task-target">📣 任務目標<br>　　- 確認已詳閱入職規範與冒險指南</span>
                 <label class="check-item"><input type="checkbox" id="chk-guide"> 我已閱讀「📜 冒險指南」</label>
                 <label class="check-item"><input type="checkbox" id="chk-forge"> 我已閱讀「🏹 鍛造秘笈」</label>
                 <label class="check-item"><input type="checkbox" id="chk-risk"> 若被退件「👤 本人承擔」</label>
-                
-                <div class="action-center">
-                    <button class="btn-confirm" id="btn-trial-1" onclick="checkTrial1(event)">🚀 提交本關任務</button>
-                </div>
+                <button class="btn-confirm" id="btn-trial-1" onclick="checkTrial1(event)">🚀 提交本關任務</button>
             </div>
         </details>
-
 
         <details id="detail-trial-2">
             <summary class="main-summary">【裝備盤點】行囊區</summary>
             <div class="details-body">
-                <span class="task-target">
-                    📣 任務目標 <br>
-                    　　- 確認現有證照與銀行帳戶<br>
-                    　　- 若無下列文件亦可直接確認
-                </span>
-                
+                <span class="task-target">📣 任務目標<br>　　- 確認現有證照與銀行帳戶，若無亦可確認</span>
                 <label class="check-item"><input type="checkbox"> 台新國際商業銀行-實體存摺</label>
                 <label class="check-item"><input type="checkbox"> 中餐證照</label>
                 <label class="check-item"><input type="checkbox"> 西餐證照</label>
-                <label class="check-item">
-                    其他：<input type="text" class="other-input" placeholder="________________">
-                </label>
-                
-                <div class="action-center">
-                    <button class="btn-confirm" id="btn-trial-2" onclick="GameEngine.completeTrial(event, 2)">🚀 提交本關任務</button>
-                </div>
+                <label class="check-item">其他：<input type="text" class="other-input" placeholder="________________"></label>
+                <button class="btn-confirm" id="btn-trial-2" onclick="GameEngine.completeTrial(event, 2)">🚀 提交本關任務</button>
             </div>
         </details>
-
 
         <details id="detail-trial-3">
             <summary class="main-summary">【裝備強化】鑑定所</summary>
             <div class="details-body">
-                <span class="task-target">
-                    📣 任務目標 <br>
-                    　　- 上傳入職五大必備文件圖檔<br>
-                    　　- 確實填寫並追蹤體檢進度
-                </span>
-                
+                <span class="task-target">📣 任務目標<br>　　- 上傳入職五大必備文件圖檔</span>
                 <label class="check-item"><input type="checkbox" class="chk-trial3" id="chk-t3-1"> [必備] 勞工體格檢查報告</label>
-                <div class="upload-btn-group" style="padding-left: 28px; margin-top: -8px; margin-bottom: 20px;">
-                    <label class="file-upload-btn">
-                        📁 選擇檔案
-                        <input type="file" accept="image/*,.pdf" onchange="GameEngine.handleFileUpload(this, 'chk-t3-1')">
-                    </label>
-                    <span class="upload-status">未上傳</span>
-                </div>
+                <div class="upload-btn-group" style="padding-left:24px;"><label class="file-upload-btn">📁 選擇檔案<input type="file" onchange="GameEngine.handleFileUpload(this, 'chk-t3-1')"></label><span class="upload-status">未上傳</span></div>
                 
                 <label class="check-item"><input type="checkbox" class="chk-trial3" id="chk-t3-2"> [必備] 食品從業人員體檢報告</label>
-                <div class="upload-btn-group" style="padding-left: 28px; margin-top: -8px; margin-bottom: 20px;">
-                    <label class="file-upload-btn">
-                        📁 選擇檔案
-                        <input type="file" accept="image/*,.pdf" onchange="GameEngine.handleFileUpload(this, 'chk-t3-2')">
-                    </label>
-                    <span class="upload-status">未上傳</span>
-                </div>
-
+                <div class="upload-btn-group" style="padding-left:24px;"><label class="file-upload-btn">📁 選擇檔案<input type="file" onchange="GameEngine.handleFileUpload(this, 'chk-t3-2')"></label><span class="upload-status">未上傳</span></div>
+                
                 <label class="check-item"><input type="checkbox" class="chk-trial3" id="chk-t3-3"> [必備] 兩吋照片一張 (無須上傳)</label>
 
                 <div class="tracking-box">
-                    <span class="tracking-header">🕒 體檢進度追蹤</span>
-                    
-                    <div class="date-row">
-                        <label>預計體檢日期：</label>
-                        <input type="date" id="input-exam-date">
-                        <button class="btn-lock" id="btn-lock-exam" onclick="GameEngine.lockDate('exam')">確認</button>
-                    </div>
-                    
-                    <div class="date-row">
-                        <label>申請更改日期：</label>
-                        <input type="date" id="input-change-date">
-                        <button class="btn-lock" id="btn-lock-change" onclick="GameEngine.requestChange()">確認</button>
-                    </div>
-
-                    <div class="lock-note">
-                        ⚠️ 日期一經鎖定無法修改，若需調整請洽人資承辦。<br>
-                        ⚠️ 無理由延期予以扣分，請再三確認後再動作。
-                    </div>
+                    <div class="date-row"><label>預計體檢日期：</label><input type="date" id="input-exam-date"><button class="btn-lock" id="btn-lock-exam" onclick="GameEngine.lockDate('exam')">確認</button></div>
+                    <div class="date-row"><label>申請更改日期：</label><input type="date" id="input-change-date"><button class="btn-lock" id="btn-lock-change" onclick="GameEngine.requestChange()">確認</button></div>
                 </div>
-
-                <div class="action-center">
-                    <button class="btn-confirm" id="btn-trial-3" onclick="checkTrial3(event)">🚀 提交本關任務</button>
-                </div>
+                <button class="btn-confirm" id="btn-trial-3" onclick="checkTrial3(event)">🚀 提交本關任務</button>
             </div>
         </details>
-
 
         <details id="detail-trial-4">
             <summary class="main-summary">【戰役集結】前線營</summary>
             <div class="details-body">
-                <span class="task-target">
-                    📣 任務目標 <br>
-                    　　- 確認物品與服裝規範<br>
-                    　　- 當日未符規定會影響總分
-                </span>
-                
-                <div style="background: rgba(251,191,36,0.15); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #fbbf24;">
-                    📅 報到時間：<span class="info-highlight" id="dyn-apt-time">等待公會發布...</span><br>
-                    📍 報到地點：<span class="info-highlight" id="dyn-apt-loc">等待公會發布...</span>
-                </div>
-
+                <div style="background:rgba(251,191,36,0.1); padding:15px; border-radius:8px; border:1px solid #fbbf24; margin-bottom:15px;">📅 報到時間：<span id="dyn-apt-time">...</span><br>📍 報到地點：<span id="dyn-apt-loc">...</span></div>
                 <label class="check-item"><input type="checkbox" class="chk-trial4"> 確認當日服裝儀容規範</label>
                 <label class="check-item"><input type="checkbox" class="chk-trial4"> 五大正本文件已備妥</label>
-                <label class="check-item"><input type="checkbox" class="chk-trial4"> 確認報到時間與地點</label>
-
-                <div class="action-center">
-                    <button class="btn-confirm" id="btn-trial-4" onclick="GameEngine.completeTrial(event, 4)">🚀 提交本關任務</button>
-                </div>
+                <button class="btn-confirm" id="btn-trial-4" onclick="GameEngine.completeTrial(event, 4)">🚀 提交本關任務</button>
             </div>
         </details>
-
 
         <details id="detail-trial-5">
             <summary class="main-summary">【最終戰役】誓約日</summary>
             <div class="details-body">
-                <span class="task-target">
-                    📣 任務目標 <br>
-                    　　- 填寫勞工名卡與簽署合約
-                </span>
-                
-                <a href="https://mys0819.github.io/LCS1/" target="_blank" class="external-link">🔗 開啟勞工名卡填寫表單</a>
-                
-                <div style="margin-top: 15px;">
-                    <label class="check-item">
-                        <input type="checkbox" class="chk-trial5" id="chk-t5-1" onclick="GameEngine.toggleTrial5Score(event, 't5_score_1')"> 
-                        勞工名卡已填寫完成
-                    </label>
-                    <label class="check-item">
-                        <input type="checkbox" class="chk-trial5" id="chk-t5-2" onclick="GameEngine.toggleTrial5Score(event, 't5_score_2')"> 
-                        勞動契約已填寫完成
-                    </label>
-                </div>
-
-                <div class="action-center">
-                    <button class="btn-confirm" id="btn-trial-5" onclick="GameEngine.completeTrial(event, 5)">🚀 提交本關任務</button>
-                </div>
+                <a href="https://mys0819.github.io/LCS1/" target="_blank" style="color:#8ab4f8; text-decoration:underline;">🔗 開啟勞工名卡填寫表單</a>
+                <label class="check-item"><input type="checkbox" class="chk-trial5" id="chk-t5-1" onclick="GameEngine.toggleTrial5Score(event, 't5_score_1')"> 勞工名卡已填寫完成</label>
+                <label class="check-item"><input type="checkbox" class="chk-trial5" id="chk-t5-2" onclick="GameEngine.toggleTrial5Score(event, 't5_score_2')"> 勞動契約已填寫完成</label>
+                <button class="btn-confirm" id="btn-trial-5" onclick="GameEngine.completeTrial(event, 5)">🚀 提交本關任務</button>
             </div>
         </details>
-
 
         <details id="detail-trial-6">
             <summary class="main-summary">【榮耀加冕】聖殿區</summary>
             <div class="details-body">
-                <span class="task-target">
-                    📣 任務目標 <br>
-                    　　- 待公會完成最後審核<br>
-                    　　- 正式踏入榮耀殿堂
-                </span>
-                
-                <label class="check-item"><input type="checkbox" class="bank-chk" id="chk-bank-have" onclick="checkBankLogic(this, 'have')"> 已有台新銀行戶頭</label>
-                <label class="check-item"><input type="checkbox" class="bank-chk" id="chk-bank-process" onclick="checkBankLogic(this, 'process')"> 申辦中</label>
-                <label class="check-item"><input type="checkbox" class="bank-chk" id="chk-bank-done" onclick="checkBankLogic(this, 'done')"> 辦理完成</label>
-                
-                <div class="tracking-box">
-                    <div class="date-row">
-                        <label>預計辦理日期：</label>
-                        <input type="date" id="input-bank-date">
-                        <button class="btn-lock" id="btn-lock-bank" onclick="GameEngine.lockDate('bank')">確認</button>
-                    </div>
-                </div>
-
-                <div class="action-center">
-                    <button class="btn-confirm" id="btn-trial-6" style="color:#fbbf24; border-color:#fbbf24;" onclick="GameEngine.completeTrial(event, 6)">👑 迎接最終榮耀</button>
-                </div>
+                <label class="check-item"><input type="checkbox" onclick="checkBankLogic(this, 'have')" id="chk-bank-have"> 已有台新帳戶</label>
+                <label class="check-item"><input type="checkbox" onclick="checkBankLogic(this, 'process')" id="chk-bank-process"> 申辦中</label>
+                <label class="check-item"><input type="checkbox" onclick="checkBankLogic(this, 'done')" id="chk-bank-done"> 辦理完成</label>
+                <div class="date-row"><label>預計辦理日期：</label><input type="date" id="input-bank-date"><button class="btn-lock" id="btn-lock-bank" onclick="GameEngine.lockDate('bank')">確認</button></div>
+                <button class="btn-confirm" id="btn-trial-6" onclick="GameEngine.completeTrial(event, 6)">👑 迎接最終榮耀</button>
             </div>
         </details>
 
     </main>
-
 
     <footer class="footer">
         <img src="assets/MYs_logo_去背.png" alt="MYs Logo" class="footer-logo">
         © Copyright 2026 MYs System-b1.0.0-03-04-2026-115
     </footer>
 
-
     <script>
-        // 🌟 初始化入口
-        window.addEventListener('load', () => {
-            if (typeof GameEngine !== 'undefined') { 
-                GameEngine.init(); 
-            }
-        });
-        
-        // 關卡 1 防呆
-        function checkTrial1(e) { 
-            if (!document.getElementById('chk-guide').checked || 
-                !document.getElementById('chk-forge').checked || 
-                !document.getElementById('chk-risk').checked) { 
-                alert("⚠️ 勇主請注意\n必須勾選所有確認項目，才能推進！"); 
-                return; 
-            } 
-            GameEngine.completeTrial(e, 1); 
-        }
-        
-        // 關卡 3 防呆
-        function checkTrial3(e) { 
-            const chks = document.querySelectorAll('.chk-trial3'); 
-            let all = true; 
-            chks.forEach(c => { if(!c.checked) all = false; }); 
-            if (!all) { 
-                alert("⚠️ 勇主請注意\n必須完成並勾選所有必要項目，才能推進！"); 
-                return; 
-            } 
-            GameEngine.completeTrial(e, 3); 
-        }
-
-        // 銀行單選邏輯連動
-        function checkBankLogic(clickedEl, statusType) {
-            if (clickedEl.checked) {
-                GameEngine.state.bankStatus = statusType;
-            } else {
-                GameEngine.state.bankStatus = null;
-            }
-            GameEngine.save();
-            GameEngine.updateButtonStyles(); 
-        }
+        function checkTrial1(e) { if (!document.getElementById('chk-guide').checked || !document.getElementById('chk-forge').checked || !document.getElementById('chk-risk').checked) { alert("⚠️ 請勾選所有確認項目！"); return; } GameEngine.completeTrial(e, 1); }
+        function checkTrial3(e) { const chks = document.querySelectorAll('.chk-trial3'); let all = true; chks.forEach(c => { if(!c.checked) all = false; }); if (!all) { alert("⚠️ 請完成所有必備項目！"); return; } GameEngine.completeTrial(e, 3); }
+        function checkBankLogic(el, type) { if(el.checked) GameEngine.state.bankStatus = type; GameEngine.save(); GameEngine.updateUI(); }
     </script>
-
 </body>
 </html>

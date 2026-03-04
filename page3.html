@@ -301,10 +301,6 @@
             document.querySelectorAll('.dyn-type').forEach(el => el.innerText = data.type);
             document.querySelectorAll('.dyn-name').forEach(el => el.innerText = data.userName);
         }
-        window.addEventListener('load', () => {
-            applyData(fetchedData);
-            if (typeof GameEngine !== 'undefined') { GameEngine.init(); }
-        });
         
         function checkTrial1(e) { if (!document.getElementById('chk-guide').checked || !document.getElementById('chk-forge').checked || !document.getElementById('chk-risk').checked) { alert("⚠️ 勇主請注意\n必須勾選所有確認項目，才能推進！"); return; } GameEngine.completeTrial(e, 1); }
         

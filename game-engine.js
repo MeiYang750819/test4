@@ -2,11 +2,11 @@
 /* <======== 檔案用途：遊戲核心邏輯與狀態管理 ======== > */
 
 /* ================================================================
-   【 ⚙️ GAME ENGINE - 最終完美連線版 】
+   【 ⚙️ GAME ENGINE - 最終完美連線優化版 】
    ================================================================ */
 const GameEngine = {
     // 🌟 您專屬的 API 連線網址
-    API_URL: "https://script.google.com/macros/s/AKfycbz1QKJAz9IIQ9haLHQaAihnqMZG7KfGFYpJqAx8ZW8TTFyQbL6z213HNHzM9yqRVjK0mg/exec",
+    API_URL: "https://script.google.com/macros/s/AKfycbyuS_Vj905Kql6E73Qsi3sFvmfmep1pT1-NYtAgPgFDk_Ar2gsVh0jrNfzCc0W8Yco/exec",
 
     state: {
         sysId: null, // 系統編號 (由 URL 取得)
@@ -29,15 +29,15 @@ const GameEngine = {
         appointmentTime: "等待公會發布...", 
         appointmentLocation: "等待公會發布...", 
         
-        // 🌟 分數細項記錄
+        // 🌟 精細化分數細項記錄
         scoreDetails: {
-            baseAndExplore: 0,
-            penalty: 0,
-            bonus: 0,
-            hrEval: 0
+            baseScore: 0,    // 基礎分 (1~6關固定分)
+            exploreScore: 0, // 探索分 (FAQ、大小摺疊)
+            bonusScore: 0,   // 獎勵分 (體檢早鳥等)
+            trapScore: 0     // 陷阱分 (改期、退件、逾期)
         },
         hasSeenAlert: false,
-        hasSeenApprovedAlert: false // 🌟 新增：防止通過通知重複跳出
+        hasSeenApprovedAlert: false 
     },
 
     ranks: [
@@ -81,6 +81,7 @@ const GameEngine = {
         
         this.injectGlobalCSS();
         
+        // 🌟 啟動時向後台拉取資料
         if (this.state.sysId) {
             this.fetchBackendData();
         } else {
@@ -99,7 +100,7 @@ const GameEngine = {
         }
     },
 
-    // 🌟 從後台抓取資料並同步介面
+    // 🌟 從後台抓取資料並同步介面 (包含日期同步與通過通知)
     fetchBackendData() {
         fetch(this.API_URL + "?id=" + this.state.sysId)
             .then(response => response.json())
@@ -107,30 +108,30 @@ const GameEngine = {
                 if (result.success) {
                     const data = result.data;
                     
+                    // 1. 優先渲染基本身分 (載入感最快)
                     document.querySelectorAll('.dyn-company').forEach(el => el.innerText = data.companyName);
                     document.querySelectorAll('.dyn-team').forEach(el => el.innerText = data.team);
                     document.querySelectorAll('.dyn-type').forEach(el => el.innerText = data.type);
                     document.querySelectorAll('.dyn-name').forEach(el => el.innerText = data.userName);
                     
+                    // 2. 同步日期鎖定狀態 (由後台強迫同步)
+                    if (data.examDate) { this.state.examDate = data.examDate; this.state.examDateLocked = true; }
+                    if (data.resultDate) { this.state.resultDate = data.resultDate; this.state.resultDateLocked = true; }
+                    if (data.bankDate) { this.state.bankDate = data.bankDate; this.state.bankDateLocked = true; }
+
+                    // 3. 同步報到資訊與分數
                     this.state.appointmentTime = data.appointmentTime;
                     this.state.appointmentLocation = data.appointmentLocation;
                     this.state.score = data.totalScore || 0; 
-                    this.state.scoreDetails = data.scoreDetails || { baseAndExplore: 0, penalty: 0, bonus: 0, hrEval: 0 };
                     
-                    // 🌟 核心修正：日期強迫同步邏輯
-                    if (data.examDate) {
-                        this.state.examDate = data.examDate;
-                        this.state.examDateLocked = true;
-                    }
-                    if (data.resultDate) {
-                        this.state.resultDate = data.resultDate;
-                        this.state.resultDateLocked = true;
-                    }
-                    if (data.bankDate) {
-                        this.state.bankDate = data.bankDate;
-                        this.state.bankDateLocked = true;
+                    // 4. 對接細項分數
+                    if (data.scoreDetails) {
+                        this.state.scoreDetails.baseScore = data.scoreDetails.baseAndExplore; // 基礎+探索
+                        this.state.scoreDetails.bonusScore = data.scoreDetails.bonus;
+                        this.state.scoreDetails.trapScore = data.scoreDetails.penalty;
                     }
 
+                    // 5. 退件自動解封邏輯
                     if (data.trial3Status === '退件' && this.state.currentTrial >= 3 && this.state.currentTrial < 6) {
                         this.state.currentTrial = 2;
                         this.state.location = '📁 裝備盤點';
@@ -143,17 +144,17 @@ const GameEngine = {
                     
                     let mainAlertTriggered = false;
 
-                    // 🌟 1. 優先判斷「通過通知」
+                    // 🌟 通知順序 A：優先判斷審核通過通知
                     if (data.isApproved && !this.state.hasSeenApprovedAlert) {
                         mainAlertTriggered = true;
                         this.state.hasSeenApprovedAlert = true;
                         this.save();
-                        this.showSysAlert('reward', '✨ 任務進度更新', '恭喜！您的改期申請或鑑定文件已審核通過！', () => {
+                        this.showSysAlert('reward', '✨ 任務進度更新', '恭喜！您的申請或鑑定文件已審核通過！', () => {
                             if (data.isDelayed) this.showDelayWarning();
                         });
                     }
 
-                    // 🌟 2. 判斷系統警示 (扣分/加分)
+                    // 🌟 通知順序 B：系統警示 (扣分/加分)
                     if (!mainAlertTriggered && data.systemAlert) {
                         if (data.systemAlert === 'penalty' && !this.state.hasSeenAlert) {
                             mainAlertTriggered = true;
@@ -172,7 +173,7 @@ const GameEngine = {
                         }
                     }
                     
-                    // 🌟 3. 若都沒跳通知，但有逾期，直接呼叫閃爍
+                    // 🌟 通知順序 C：若無彈窗但逾期，直接呼叫閃爍
                     if (!mainAlertTriggered && data.isDelayed) {
                         this.showDelayWarning();
                     }
@@ -188,10 +189,14 @@ const GameEngine = {
             });
     },
 
+    // 🌟 同步資料至後端 (處理箭頭流邏輯)
     syncToBackend(payload) {
         if (!this.state.sysId) return; 
+        
         payload.id = this.state.sysId;
-        payload.currentScore = this.state.scoreDetails.baseAndExplore; 
+        payload.userName = this.state.userName;
+        // 傳送前台算出的基礎+探索總分
+        payload.currentScore = this.state.scoreDetails.baseScore + this.state.scoreDetails.exploreScore;
         
         fetch(this.API_URL, {
             method: "POST",
@@ -201,7 +206,9 @@ const GameEngine = {
         .then(result => {
             if (result.success && result.newScoreData) {
                 this.state.score = result.newScoreData.totalScore || 0;
-                this.state.scoreDetails = result.newScoreData.scoreDetails || { baseAndExplore: 0, penalty: 0, bonus: 0, hrEval: 0 };
+                // 更新後台回傳的結算分數
+                this.state.scoreDetails.bonusScore = result.newScoreData.scoreDetails.bonus;
+                this.state.scoreDetails.trapScore = result.newScoreData.scoreDetails.penalty;
                 this.save();
                 this.updateUI();
             }
@@ -249,11 +256,7 @@ const GameEngine = {
 
     flashElement(id) {
         const el = document.getElementById(id);
-        if (el) {
-            el.classList.remove('shiny-effect');
-            void el.offsetWidth;
-            el.classList.add('shiny-effect');
-        }
+        if (el) { el.classList.remove('shiny-effect'); void el.offsetWidth; el.classList.add('shiny-effect'); }
     },
 
     upgradeArmor() {
@@ -279,6 +282,7 @@ const GameEngine = {
         return false;
     },
 
+    // 🌟 延宕奪命連環閃 (閃三次後靜止，點擊解除)
     showDelayWarning() {
         if(document.getElementById('delay-warning-overlay')) return;
         const overlay = document.createElement('div');
@@ -295,35 +299,18 @@ const GameEngine = {
         if (this.state.hasSeenAlert) return;
         const urlParams = new URLSearchParams(window.location.search);
         const alertType = urlParams.get('alert');
-
-        if (alertType === 'penalty') {
-            this.showSysAlert('danger', '⚠️ 系統通知', '任務遭遇挫折，積分有所減損！');
-            this.state.hasSeenAlert = true;
-            this.save();
-        } else if (alertType === 'bonus') {
-            this.showSysAlert('reward', '✨ 系統通知', '表現優異！系統已發放效率獎勵積分！');
-            this.state.hasSeenAlert = true;
-            this.save();
-        }
+        if (alertType === 'penalty') { this.showSysAlert('danger', '⚠️ 系統通知', '任務遭遇挫折，積分有所減損！'); this.state.hasSeenAlert = true; this.save(); } 
+        else if (alertType === 'bonus') { this.showSysAlert('reward', '✨ 系統通知', '表現優異！系統已發放效率獎勵積分！'); this.state.hasSeenAlert = true; this.save(); }
     },
 
+    // 🌟 支援回呼函數的彈窗 (用於按完確定後觸發警告)
     showSysAlert(type, titleText, msgText, onCloseCallback) {
         const modalId = 'sys-alert-' + Date.now();
-        const html = `
-            <div class="sys-alert-modal active" id="${modalId}">
-                <div class="sys-alert-box ${type}">
-                    <div class="sys-alert-title ${type}">${titleText}</div>
-                    <div class="sys-alert-text">${msgText}</div>
-                    <button class="sys-alert-btn" id="btn-${modalId}">我知道了</button>
-                </div>
-            </div>
-        `;
+        const html = `<div class="sys-alert-modal active" id="${modalId}"><div class="sys-alert-box ${type}"><div class="sys-alert-title ${type}">${titleText}</div><div class="sys-alert-text">${msgText}</div><button class="sys-alert-btn" id="btn-${modalId}">我知道了</button></div></div>`;
         document.body.insertAdjacentHTML('beforeend', html);
         document.getElementById(`btn-${modalId}`).onclick = () => {
             document.getElementById(modalId).remove();
-            if (typeof onCloseCallback === 'function') {
-                onCloseCallback();
-            }
+            if (typeof onCloseCallback === 'function') onCloseCallback();
         };
     },
 
@@ -331,10 +318,7 @@ const GameEngine = {
         if (this.state.achievements.includes(id)) return;
         this.state.achievements.push(id); 
         this.save();
-        let scoreGain = 0;
-        let toastMsg = "";
-        let alertMsg = "";
-        let doFlashItem = false; 
+        let scoreGain = 0; let toastMsg = ""; let alertMsg = ""; let doFlashItem = false; 
         
         if (action === 'large_fold') { scoreGain = 2; alertMsg = `🔔 發現隱藏關卡，冒險積分 +${scoreGain}`; } 
         else if (action === 'explore1') { scoreGain = 1; toastMsg = `✨ 深入探索，冒險積分+${scoreGain}`; } 
@@ -342,14 +326,13 @@ const GameEngine = {
         else if (action === 'explore_armor') { scoreGain = 1; toastMsg = `✨ 防具升級，冒險積分+${scoreGain}`; } 
         else if (action === 'random_weapon') { scoreGain = 1; toastMsg = `⚔️ 獲得基礎武器，戰力大幅提升！`; }
 
-        if (alertMsg) { alert(alertMsg); }
+        if (alertMsg) alert(alertMsg);
         this.createFloatingText(event, `+${scoreGain}`);
         if (toastMsg) this.showToast(toastMsg);
         
         let delayTime = toastMsg ? 3000 : 1000;
         setTimeout(() => {
-            this.state.score += scoreGain;
-            this.state.scoreDetails.baseAndExplore += scoreGain; 
+            this.state.scoreDetails.exploreScore += scoreGain; 
             if (action === 'explore_armor') { if (this.upgradeArmor()) doFlashItem = true; } 
             else if (action === 'random_weapon') {
                 const weapons = ['🗡️ 精鋼短劍', '🏹 獵人短弓', '🔱 鐵尖長槍'];
@@ -357,7 +340,7 @@ const GameEngine = {
                 this.state.weaponType = w; this.state.items.push(w); doFlashItem = true;
             }
             this.save(); this.updateUI(); this.syncToBackend({}); 
-            if (scoreGain > 0 && action !== 'random_weapon') { this.flashElement('score-text'); }
+            if (scoreGain > 0 && action !== 'random_weapon') this.flashElement('score-text');
             if (doFlashItem) { this.flashElement('item-text'); this.flashElement('rank-name'); }
         }, delayTime);
     },
@@ -372,15 +355,13 @@ const GameEngine = {
         if (isChecked && !this.state.achievements.includes(id)) {
             this.createFloatingText(event, `+${scoreGain}`);
             this.state.achievements.push(id);
-            this.state.score += scoreGain;
-            this.state.scoreDetails.baseAndExplore += scoreGain;
+            this.state.scoreDetails.baseScore += scoreGain;
             this.save();
             if(Object.keys(payload).length > 0) this.syncToBackend(payload);
             setTimeout(() => { this.updateUI(); this.flashElement('score-text'); }, 1000); 
         } else if (!isChecked && this.state.achievements.includes(id)) {
             this.state.achievements = this.state.achievements.filter(a => a !== id);
-            this.state.score -= scoreGain;
-            this.state.scoreDetails.baseAndExplore -= scoreGain;
+            this.state.scoreDetails.baseScore -= scoreGain;
             this.save(); this.updateUI(); this.flashElement('score-text');
         }
     },
@@ -388,18 +369,14 @@ const GameEngine = {
     createFloatingText(e, text) {
         const x = e.clientX || (e.touches && e.touches[0].clientX);
         const y = e.clientY || (e.touches && e.touches[0].clientY);
-        const el = document.createElement('div');
-        el.className = 'floating-text'; el.innerText = text;
+        const el = document.createElement('div'); el.className = 'floating-text'; el.innerText = text;
         el.style.left = `${x}px`; el.style.top = `${y}px`;
-        document.body.appendChild(el);
-        setTimeout(() => el.remove(), 1500);
+        document.body.appendChild(el); setTimeout(() => el.remove(), 1500);
     },
 
     showToast(msg) {
-        const toast = document.createElement('div');
-        toast.className = 'game-toast'; toast.innerText = msg;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.classList.add('show'), 100);
+        const toast = document.createElement('div'); toast.className = 'game-toast'; toast.innerText = msg;
+        document.body.appendChild(toast); setTimeout(() => toast.classList.add('show'), 100);
         setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 500); }, 3000); 
     },
 
@@ -440,8 +417,7 @@ const GameEngine = {
             { id: 'input-bank-date', btn: 'btn-lock-bank', val: this.state.bankDate, locked: this.state.bankDateLocked }
         ];
         dateFields.forEach(field => {
-            const input = document.getElementById(field.id);
-            const btn = document.getElementById(field.btn);
+            const input = document.getElementById(field.id); const btn = document.getElementById(field.btn);
             if (input && btn) {
                 input.value = field.val || "";
                 if (field.locked) { input.type = 'text'; input.disabled = true; btn.innerText = "已鎖定"; btn.disabled = true; btn.style.opacity = "0.5"; } 
@@ -456,8 +432,7 @@ const GameEngine = {
         if (!val) { alert("請先選擇日期！"); return; }
         const confirmLock = confirm("鎖定就不能更改了喔，確定要鎖定嗎？");
         if (!confirmLock) return;
-        const parts = val.split('-');
-        let formattedVal = val;
+        const parts = val.split('-'); let formattedVal = val;
         if(parts.length === 3) { formattedVal = `${parts[0]}年${parts[1]}月${parts[2]}日`; }
         let payload = {};
         if (type === 'exam') { this.state.examDate = formattedVal; this.state.examDateLocked = true; payload.examDate = formattedVal; }
@@ -499,13 +474,13 @@ const GameEngine = {
         if (trialNum === 6) payload.bankStatus = (this.state.bankStatus === 'have' ? '已有帳戶' : (this.state.bankStatus === 'process' ? '申辦中' : '辦理完成'));
         this.syncToBackend(payload);
         const currentDetails = document.getElementById(`detail-trial-${trialNum}`);
-        if (currentDetails) { currentDetails.removeAttribute('open'); }
+        if (currentDetails) currentDetails.removeAttribute('open'); // 🌟 過關自動收合
         if (trialNum === 6) { setTimeout(() => { this.showFinalAchievement(true); if (this.upgradeArmor()) {} if (this.upgradeWeapon()) {} this.save(); this.updateUI(); }, 1500); } 
         else {
             let msg = trialNum === 3 ? '📣 此階段任務已完成，請稍待鑑定！' : '📣 此階段任務已完成，請繼續前進！';
             this.showToast(msg);
             setTimeout(() => {
-                if (trialNum !== 5) { this.state.score += tData.scoreGain; this.state.scoreDetails.baseAndExplore += tData.scoreGain; }
+                if (trialNum !== 5) this.state.scoreDetails.baseScore += tData.scoreGain;
                 let doFlashItem = false; if (this.upgradeArmor()) doFlashItem = true; if (this.upgradeWeapon()) doFlashItem = true;
                 this.save(); this.updateUI(); this.syncToBackend({});
                 if (doFlashItem) this.flashElement('item-text'); this.flashElement('loc-text'); this.flashElement('prog-val'); if (trialNum !== 5) this.flashElement('score-text');
@@ -526,8 +501,7 @@ const GameEngine = {
             if (this.state.sysId) {
                 payload.id = this.state.sysId;
                 fetch(this.API_URL, { method: "POST", body: JSON.stringify(payload) })
-                .then(res => res.json())
-                .then(result => {
+                .then(res => res.json()).then(result => {
                     if (result.success) { if(statusSpan) { statusSpan.innerText = "✅ 已上傳"; statusSpan.classList.add('success'); } const chkBox = document.getElementById(chkId); if (chkBox) chkBox.checked = true; } 
                     else { if(statusSpan) statusSpan.innerText = "❌ 失敗"; }
                 }).catch(err => { if(statusSpan) statusSpan.innerText = "❌ 網路錯誤"; });
@@ -555,11 +529,12 @@ const GameEngine = {
         let mockeryHTML = !hasWeapon ? `<div class="fade-in-row mockery-text" style="animation: fadeUpIn 0.8s forwards 3.3s;">📝 系統額外判定：<br>勇者雖已通關，但未詳閱《鍛造秘笈》，<br>仍全程赤手空拳完成試煉...敬佩！敬佩！</div>` : "";
         const renderModal = () => {
             if(document.getElementById('final-achievement-modal')) document.getElementById('final-achievement-modal').remove();
-            const baseScore = this.state.scoreDetails.baseAndExplore; const penalty = this.state.scoreDetails.penalty; const hrEval = this.state.scoreDetails.hrEval;
-            let detailHtml = `<div style="font-size: 13px; color: #888; margin-left: 10px; margin-top: 5px; line-height: 1.4;">└ 基礎與探索得分：${baseScore} 分<br>`;
-            if (penalty < 0) detailHtml += `└ 鑑定所或逾期扣分：<span style="color:#ff8a8a;">${penalty} 分</span><br>`;
-            if (hrEval !== 0) detailHtml += `└ 人資綜合評估：<span style="${hrEval > 0 ? 'color:#4ade80;' : 'color:#ff8a8a;'}">${hrEval > 0 ? '+'+hrEval : hrEval} 分</span><br>`;
-            detailHtml += `</div>`;
+            const details = this.state.scoreDetails;
+            let detailHtml = `<div style="font-size: 13px; color: #888; margin-left: 10px; margin-top: 5px; line-height: 1.4;">` +
+                             `└ 基礎分：${details.baseScore} 分<br>` +
+                             `└ 探索分：${details.exploreScore} 分<br>` +
+                             `└ 獎勵分：<span style="color:#4ade80;">${details.bonusScore} 分</span><br>` +
+                             `└ 陷阱分：<span style="color:#ff8a8a;">${details.trapScore} 分</span><br></div>`;
             const modal = document.createElement('div'); modal.id = 'final-achievement-modal';
             modal.innerHTML = `<div class="achievement-box" onclick="event.stopPropagation()"><div class="close-modal-btn" onclick="document.getElementById('final-achievement-modal').classList.remove('active'); setTimeout(()=>document.getElementById('final-achievement-modal').remove(),300)">✕</div><div class="typing-container"><span class="type-char" style="animation: stampIn 0.5s forwards 0s;">評</span><span class="type-char" style="animation: stampIn 0.5s forwards 0.4s;">定</span><span class="type-char" style="animation: stampIn 0.5s forwards 0.8s;">${rankLetter}</span><span class="type-char" style="animation: stampIn 0.5s forwards 1.2s;">級</span></div><div style="margin-top: 30px;"><div class="fade-in-row" style="animation: fadeUpIn 0.8s forwards 1.8s;"><strong>🏆 最終戰力評級：</strong>${fullRankTitle}</div><div class="fade-in-row" style="animation: fadeUpIn 0.8s forwards 2.1s;"><strong>💯 冒險總積分：</strong>${this.state.score} 分${detailHtml}</div><div class="fade-in-row" style="animation: fadeUpIn 0.8s forwards 2.4s;"><strong>✅ 試煉完成度：</strong>${currentProg}</div><div class="fade-in-row" style="animation: fadeUpIn 0.8s forwards 2.7s;"><strong>🛡️ 最終裝備：</strong>${finalEquip}</div><div class="fade-in-row eval-text" style="animation: fadeUpIn 0.8s forwards 3.0s;"><strong>📜 系統總評：</strong><br>${evalStr}</div>${mockeryHTML}</div></div>`;
             modal.onclick = () => { modal.classList.remove('active'); setTimeout(()=>modal.remove(),300); };

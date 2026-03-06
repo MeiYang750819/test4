@@ -26,7 +26,7 @@ const GameEngine = {
         bankStatus: null, /* 🌟 記錄銀行狀態 */
         
         // 🌟 已將寫死的測試時間與地點拉掉，改為預設等待字樣，等待後台資料覆蓋
-        appointmentTime: "2026-03-06", 
+        appointmentTime: "2026-03-06 08:00", 
         appointmentLocation: "等待公會發布...", 
         
         // 🌟 新增：分數細項記錄 (供大結局結算與彈窗判定用)

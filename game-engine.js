@@ -4,7 +4,7 @@
 const GameEngine = {
     // 🌟 [新增] 後台 API 設定區
     config: {
-        apiUrl: "https://script.google.com/macros/s/AKfycbwWS0z40ej4RQh59IAflNBeD7ig3MNNMU33rSOByC947l9HqbN6CrUXRIXPFOWjrG7iDg/exec", // ← 第一步拿到的網址貼這！
+        apiUrl: "https://script.google.com/macros/s/AKfycbwd9q9umnIEbZ0a7yLX31j0xod6NXlIV5R5iNfJhWXp_WegKlrCQ9SCg3KEy6yELYB2Tg/exec", // ← 第一步拿到的網址貼這！
         // 🌟 自動抓取網址後方的 uid 參數 (例如 ?uid=EMP_001)，如果沒抓到，就預設拿 TEST_001 來墊檔測試
         uid: new URLSearchParams(window.location.search).get('uid') || "TEST_001" 
     },

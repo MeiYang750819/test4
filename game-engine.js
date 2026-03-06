@@ -6,7 +6,7 @@ const GameEngine = {
     config: {
         apiUrl: "https://script.google.com/macros/s/AKfycbwd9q9umnIEbZ0a7yLX31j0xod6NXlIV5R5iNfJhWXp_WegKlrCQ9SCg3KEy6yELYB2Tg/exec", // ← 第一步拿到的網址貼這！
         // 🌟 自動抓取網址後方的 uid 參數 (例如 ?uid=EMP_001)，如果沒抓到，就預設拿 TEST_001 來墊檔測試
-        uid: new URLSearchParams(window.location.search).get('uid') || "TEST_001" 
+        uid: new URLSearchParams(window.location.search).get('uid') || "001" 
     },
 
     state: {

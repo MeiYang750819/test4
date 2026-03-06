@@ -4,9 +4,9 @@
 const GameEngine = {
     // 🌟 [新增] 後台 API 設定區
     config: {
-        apiUrl: "https://script.google.com/macros/s/AKfycbwd9q9umnIEbZ0a7yLX31j0xod6NXlIV5R5iNfJhWXp_WegKlrCQ9SCg3KEy6yELYB2Tg/exec", // ← 第一步拿到的網址貼這！
+        apiUrl: "https://script.google.com/macros/s/AKfycbyFXNtA8VE5VGA7oGNOX1HIJP-cxVww8R386VanaffFBnv4csTHqpaYpeGbSWn9h8oh0A/exec", // ← 第一步拿到的網址貼這！
         // 🌟 自動抓取網址後方的 uid 參數 (例如 ?uid=EMP_001)，如果沒抓到，就預設拿 TEST_001 來墊檔測試
-        uid: new URLSearchParams(window.location.search).get('uid') || "001" 
+        uid: new URLSearchParams(window.location.search).get('uid') || "TEST_001" 
     },
 
     state: {
@@ -26,7 +26,7 @@ const GameEngine = {
         bankStatus: null, /* 🌟 記錄銀行狀態 */
         
         // 🌟 已將寫死的測試時間與地點拉掉，改為預設等待字樣，等待後台資料覆蓋
-        appointmentTime: "2026-03-06 08:00", 
+        appointmentTime: "等待公會發布...", 
         appointmentLocation: "等待公會發布...", 
         
         // 🌟 新增：分數細項記錄 (供大結局結算與彈窗判定用)
@@ -120,7 +120,7 @@ const GameEngine = {
         document.head.appendChild(style);
     },
 
-    // 🌟 [新增] 與 GAS 後台通訊的非同步引擎
+    // 🌟 [新增] 與 GAS 後台通訊的非同步引擎 (含強大偵錯)
     async syncWithBackend() {
         if (!this.config.apiUrl || this.config.apiUrl.includes("請把_WEB_APP")) return;
         try {
@@ -129,6 +129,9 @@ const GameEngine = {
                 body: JSON.stringify({ action: 'loadData', uid: this.config.uid })
             });
             const res = await response.json();
+            
+            console.log("後台回應狀態:", res); // F12 可查看詳細報錯
+
             if (res.status === 'success' && res.data) {
                 // 覆蓋前台的動態報到時地
                 if (res.data.appointmentTime) this.state.appointmentTime = res.data.appointmentTime;
@@ -146,9 +149,12 @@ const GameEngine = {
                 if (res.data.isOverdue) {
                     this.triggerDoomFlash();
                 }
+            } else if (res.status === 'error') {
+                console.error("⛔ 後台發生致命錯誤:", res.message, res.stack);
+                this.showToast("連線後台發生異常，請按 F12 檢視錯誤訊息！");
             }
         } catch (err) {
-            console.error("後台同步失敗:", err);
+            console.error("Fetch 連線失敗:", err);
         }
     },
     
@@ -303,6 +309,9 @@ const GameEngine = {
             this.state.score += scoreGain;
             this.state.scoreDetails.baseAndExplore += scoreGain; // 記錄細項
             
+            // 🌟 通知後台加分
+            this.notifyBackendScore(id, scoreGain);
+            
             if (action === 'explore_armor') {
                 if (this.upgradeArmor()) doFlashItem = true;
             } else if (action === 'random_weapon') {
@@ -323,6 +332,17 @@ const GameEngine = {
                 this.flashElement('rank-name'); 
             }
         }, delayTime);
+    },
+
+    // 🌟 通知後台寫入加分紀錄
+    async notifyBackendScore(field, score) {
+        if (!this.config.apiUrl || this.config.apiUrl.includes("請把_WEB_APP")) return;
+        try {
+            await fetch(this.config.apiUrl, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'updateScore', uid: this.config.uid, field: field, score: score })
+            });
+        } catch(e) {}
     },
 
     // 🌟 第五關可自由取消的獨立計分觸發器
@@ -355,7 +375,7 @@ const GameEngine = {
         const x = e.clientX || (e.touches && e.touches[0].clientX);
         const y = e.clientY || (e.touches && e.touches[0].clientY);
         const el = document.createElement('div');
-        el.className = 'floating-text';
+        el.className = 'floating-score'; // 🌟 修正點：改回 floating-score 才會吃到特效
         el.innerText = text;
         el.style.left = `${x}px`;
         el.style.top = `${y}px`;
@@ -460,6 +480,20 @@ const GameEngine = {
         
         this.save(); 
         this.updateUI();
+
+        // 🌟 鎖定日期時同步寫入後台
+        this.notifyBackendDate(type, formattedVal);
+    },
+
+    // 🌟 通知後台紀錄日期
+    async notifyBackendDate(dateType, dateValue) {
+        if (!this.config.apiUrl || this.config.apiUrl.includes("請把_WEB_APP")) return;
+        try {
+            await fetch(this.config.apiUrl, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'lockDate', uid: this.config.uid, dateType: dateType, dateValue: dateValue })
+            });
+        } catch(e) {}
     },
 
     requestChange() {
@@ -494,6 +528,14 @@ const GameEngine = {
         this.state.location = tData.loc;
         this.save(); 
         this.updateButtonStyles(); 
+
+        // 🌟 通知後台紀錄闖關完成時間
+        if (this.config.apiUrl && !this.config.apiUrl.includes("請把_WEB_APP")) {
+            fetch(this.config.apiUrl, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'completeTrial', uid: this.config.uid, trialNum: trialNum })
+            }).catch(e => {});
+        }
 
         if (trialNum === 6) {
             // 🌟 拔除 Toast，改為 1.5 秒後直接進入大結局 (煙火動畫)

@@ -4,7 +4,7 @@
 const GameEngine = {
     // 🌟 [新增] 後台 API 設定區
     config: {
-        apiUrl: "https://script.google.com/macros/s/AKfycbyFXNtA8VE5VGA7oGNOX1HIJP-cxVww8R386VanaffFBnv4csTHqpaYpeGbSWn9h8oh0A/exec", // ← 第一步拿到的網址貼這！
+        apiUrl: "https://script.google.com/macros/s/AKfycbzPbXKvSTwjD9OkilUNMU7aVTe3O70OCdi0L-khSQsqW-PQkKIjdEPxdMFBP5p_XgmLBA/exec", // ← 第一步拿到的網址貼這！
         // 🌟 自動抓取網址後方的 uid 參數 (例如 ?uid=EMP_001)，如果沒抓到，就預設拿 TEST_001 來墊檔測試
         uid: new URLSearchParams(window.location.search).get('uid') || "TEST_001" 
     },
@@ -120,14 +120,12 @@ const GameEngine = {
         document.head.appendChild(style);
     },
 
-    // 🌟 [新增] 與 GAS 後台通訊的非同步引擎 (含強大偵錯)
+    // 🌟 [修正] 與 GAS 後台通訊的非同步引擎 (改用 GET 避開 CORS 阻擋)
     async syncWithBackend() {
         if (!this.config.apiUrl || this.config.apiUrl.includes("請把_WEB_APP")) return;
         try {
-            const response = await fetch(this.config.apiUrl, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'loadData', uid: this.config.uid })
-            });
+            const fetchUrl = `${this.config.apiUrl}?action=loadData&uid=${encodeURIComponent(this.config.uid)}`;
+            const response = await fetch(fetchUrl);
             const res = await response.json();
             
             console.log("後台回應狀態:", res); // F12 可查看詳細報錯
@@ -150,7 +148,7 @@ const GameEngine = {
                     this.triggerDoomFlash();
                 }
             } else if (res.status === 'error') {
-                console.error("⛔ 後台發生致命錯誤:", res.message, res.stack);
+                console.error("⛔ 後台發生致命錯誤:", res.message);
                 this.showToast("連線後台發生異常，請按 F12 檢視錯誤訊息！");
             }
         } catch (err) {
@@ -334,14 +332,12 @@ const GameEngine = {
         }, delayTime);
     },
 
-    // 🌟 通知後台寫入加分紀錄
+    // 🌟 [修正] 通知後台寫入加分紀錄 (改用 GET)
     async notifyBackendScore(field, score) {
         if (!this.config.apiUrl || this.config.apiUrl.includes("請把_WEB_APP")) return;
         try {
-            await fetch(this.config.apiUrl, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'updateScore', uid: this.config.uid, field: field, score: score })
-            });
+            const fetchUrl = `${this.config.apiUrl}?action=updateScore&uid=${encodeURIComponent(this.config.uid)}&field=${encodeURIComponent(field)}&score=${encodeURIComponent(score)}`;
+            await fetch(fetchUrl);
         } catch(e) {}
     },
 
@@ -375,7 +371,7 @@ const GameEngine = {
         const x = e.clientX || (e.touches && e.touches[0].clientX);
         const y = e.clientY || (e.touches && e.touches[0].clientY);
         const el = document.createElement('div');
-        el.className = 'floating-score'; // 🌟 修正點：改回 floating-score 才會吃到特效
+        el.className = 'floating-score'; // 🌟 確保是 floating-score
         el.innerText = text;
         el.style.left = `${x}px`;
         el.style.top = `${y}px`;
@@ -485,14 +481,12 @@ const GameEngine = {
         this.notifyBackendDate(type, formattedVal);
     },
 
-    // 🌟 通知後台紀錄日期
+    // 🌟 [修正] 通知後台紀錄日期 (改用 GET)
     async notifyBackendDate(dateType, dateValue) {
         if (!this.config.apiUrl || this.config.apiUrl.includes("請把_WEB_APP")) return;
         try {
-            await fetch(this.config.apiUrl, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'lockDate', uid: this.config.uid, dateType: dateType, dateValue: dateValue })
-            });
+            const fetchUrl = `${this.config.apiUrl}?action=lockDate&uid=${encodeURIComponent(this.config.uid)}&dateType=${encodeURIComponent(dateType)}&dateValue=${encodeURIComponent(dateValue)}`;
+            await fetch(fetchUrl);
         } catch(e) {}
     },
 
@@ -529,12 +523,10 @@ const GameEngine = {
         this.save(); 
         this.updateButtonStyles(); 
 
-        // 🌟 通知後台紀錄闖關完成時間
+        // 🌟 [修正] 通知後台紀錄闖關完成時間 (改用 GET)
         if (this.config.apiUrl && !this.config.apiUrl.includes("請把_WEB_APP")) {
-            fetch(this.config.apiUrl, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'completeTrial', uid: this.config.uid, trialNum: trialNum })
-            }).catch(e => {});
+            const fetchUrl = `${this.config.apiUrl}?action=completeTrial&uid=${encodeURIComponent(this.config.uid)}&trialNum=${encodeURIComponent(trialNum)}`;
+            fetch(fetchUrl).catch(e => {});
         }
 
         if (trialNum === 6) {

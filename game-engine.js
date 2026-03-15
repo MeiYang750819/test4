@@ -4,7 +4,7 @@
 const GameEngine = {
     // 🌟 [新增] 後台 API 設定區
     config: {
-        apiUrl: "https://script.google.com/macros/s/AKfycbwQmT9fkBd5_98L9qTGAu6bCIREB9rnJaFWYMxgGeS9BMVMrGAua39UkYdUSVwFoSJrcw/exec", // ← 第一步拿到的網址貼這！
+        apiUrl: "https://script.google.com/macros/s/AKfycbzl3wgsoGZwMpR5_fQ-FZ-THg151schO7NN1MVxE2mkzjUM6MNOVxWdWn13gyShpD-4Rw/exec", // ← 第一步拿到的網址貼這！
         // 🌟 自動抓取網址後方的 uid 參數 (例如 ?uid=EMP_001)，如果沒抓到，就預設拿 TEST_001 來墊檔測試
         uid: new URLSearchParams(window.location.search).get('uid') || "TEST_001" 
     },
@@ -12,6 +12,7 @@ const GameEngine = {
     state: {
         score: 0,
         backendRank: "", // 🌟 儲存從後台抓來的真實評級
+        examStatus: "",  // 🌟 儲存從後台抓來的體檢審核狀態
         items: ['👕 粗製布衣'],
         location: '⛺ 新手村',
         status: '📦 檢整裝備中',
@@ -71,13 +72,16 @@ const GameEngine = {
     },
 
     init() {
+        // 🌟 強制清除所有下拉選單的預設開啟狀態 (防止快取作祟)
+        document.querySelectorAll('details').forEach(el => el.removeAttribute('open'));
+
         try {
             const saved = localStorage.getItem('hero_progress');
             if (saved) { this.state = Object.assign({}, this.state, JSON.parse(saved)); }
         } catch (e) { localStorage.removeItem('hero_progress'); }
         this.injectGlobalCSS();
         
-        // 🌟 [新增] 啟動時向後台同步最新資料
+        // 🌟 啟動時向後台同步最新資料
         this.syncWithBackend();
 
         setTimeout(() => { this.updateUI(); }, 50);
@@ -118,6 +122,19 @@ const GameEngine = {
                 box-shadow: 0 5px 15px rgba(0,0,0,0.5); font-weight: bold;
             }
             .game-toast.show { right: 20px; }
+            
+            /* 🌟 日曆圖示強制變白 */
+            input[type="date"]::-webkit-calendar-picker-indicator {
+                filter: invert(1);
+                cursor: pointer;
+            }
+            /* 🌟 鎖定後的文字強制變白與灰底 */
+            input:disabled {
+                color: #ffffff !important;
+                -webkit-text-fill-color: #ffffff !important;
+                opacity: 1 !important;
+                background-color: rgba(255, 255, 255, 0.1) !important;
+            }
         `;
         document.head.appendChild(style);
     },
@@ -137,12 +154,15 @@ const GameEngine = {
                 if (res.data.appointmentTime) this.state.appointmentTime = res.data.appointmentTime;
                 if (res.data.appointmentLocation) this.state.appointmentLocation = res.data.appointmentLocation;
                 
-                // 🌟 同步後台的真實分數與評級，讓後台作為唯一的 Truth
+                // 🌟 同步後台的真實分數、評級與審核狀態
                 if (res.data.currentScore !== "") {
                     this.state.score = parseInt(res.data.currentScore, 10) || 0;
                 }
                 if (res.data.currentRank) {
                     this.state.backendRank = res.data.currentRank;
+                }
+                if (res.data.examStatus) {
+                    this.state.examStatus = res.data.examStatus;
                 }
 
                 // 替換畫面上的基本資料
@@ -166,8 +186,8 @@ const GameEngine = {
         }
     },
     
-    // 🌟 進化版：奪命連環閃特效 (字體閃爍與警告)
-    triggerDoomFlash() {
+    // 🌟 進化版：分段式奪命連環閃特效
+    async triggerDoomFlash() {
         if (document.getElementById('doom-flash-overlay')) return;
         
         // 標記已看過，防止後續操作無限觸發
@@ -176,33 +196,46 @@ const GameEngine = {
         
         const overlay = document.createElement('div');
         overlay.id = 'doom-flash-overlay';
-        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,0,0,0.8); z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; transition: background-color 0.2s;';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; transition: background-color 0.1s;';
         
         overlay.innerHTML = `
-            <div id="doom-text-main" style="color:white; font-size:48px; font-weight:900; text-shadow: 2px 2px 10px rgba(0,0,0,0.8); margin-bottom: 20px;">⚠️ 警告！！</div>
+            <div id="doom-text-main" style="color:white; font-size:48px; font-weight:900; text-shadow: 2px 2px 10px rgba(0,0,0,0.8); margin-bottom: 20px; opacity: 0; transition: opacity 0.1s;">⚠️ 警告！！</div>
             <div id="doom-text-sub" style="color:#ffcccc; font-size:20px; font-weight:bold; max-width: 80%; line-height: 1.5; display: none;">
-                進度嚴重落後，冒險積分已遭系統扣減<br>請立即處理逾期之任務！
+                進度嚴重落後，冒險積分已遭系統扣減，請立即補件！
             </div>
             <button id="doom-btn-close" style="margin-top: 30px; padding: 12px 24px; font-size: 18px; font-weight: bold; background-color: #fbbf24; border: none; border-radius: 8px; cursor: pointer; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">我知道了</button>
         `;
         document.body.appendChild(overlay);
         
-        // 黑屏紅閃 (紅 -> 黑 -> 紅 -> 黑)
-        let count = 0;
-        const flashInterval = setInterval(() => {
-            overlay.style.backgroundColor = overlay.style.backgroundColor === 'rgba(255, 0, 0, 0.8)' ? 'rgba(0, 0, 0, 0.9)' : 'rgba(255, 0, 0, 0.8)';
-            count++;
-            if (count >= 4) { // 閃2次 (狀態切換4次)
-                clearInterval(flashInterval);
-                overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.85)'; // 最終定格在暗色背景
-                document.getElementById('doom-text-sub').style.display = 'block';
-                document.getElementById('doom-btn-close').style.display = 'block';
-                
-                document.getElementById('doom-btn-close').onclick = () => {
-                    overlay.remove();
-                };
-            }
-        }, 300); // 每 0.3 秒切換一次顏色
+        // 使用非同步等待來控制動畫流程
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+        const mainText = document.getElementById('doom-text-main');
+        const subText = document.getElementById('doom-text-sub');
+        const closeBtn = document.getElementById('doom-btn-close');
+
+        // 1. 純紅光閃爍 (紅 -> 黑交替 6 次)
+        for (let i = 0; i < 6; i++) {
+            overlay.style.backgroundColor = (i % 2 === 0) ? 'rgba(255, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.9)';
+            await sleep(150);
+        }
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.85)';
+        await sleep(300);
+
+        // 2. 警告字樣閃兩次
+        for (let i = 0; i < 2; i++) {
+            mainText.style.opacity = '1';
+            await sleep(400);
+            mainText.style.opacity = '0';
+            await sleep(200);
+        }
+
+        // 3. 顯示最終文字與關閉按鈕
+        subText.style.display = 'block';
+        closeBtn.style.display = 'block';
+
+        closeBtn.onclick = () => {
+            overlay.remove();
+        };
     },
 
     // 🌟 針對單一特定元素進行閃爍特效
@@ -756,6 +789,9 @@ const GameEngine = {
             6: "👑 聖殿區・已加冕"
         };
         
+        // 🌟 判斷人資是否審核通過體檢
+        const isExamApproved = (this.state.examStatus === true || this.state.examStatus === 'TRUE' || this.state.examStatus === '完成' || this.state.examStatus === '核准');
+        
         const trials = [1, 2, 3, 4, 5, 6];
         trials.forEach(n => {
             const btn = document.getElementById(`btn-trial-${n}`);
@@ -770,7 +806,7 @@ const GameEngine = {
                         const inputs = detailsBlock.querySelectorAll('input');
                         inputs.forEach(input => {
                             input.disabled = true;
-                            // 🌟 修正點：取消讓勾勾變淡的設定 (維持 opacity = 1)，但保持 disabled 唯讀模式
+                            // 🌟 取消讓勾勾變淡的設定 (維持 opacity = 1)，但保持 disabled 唯讀模式
                             if(input.type === 'checkbox' || input.type === 'radio' || input.type === 'file') {
                                 input.style.opacity = "1"; 
                                 input.style.cursor = "not-allowed";
@@ -794,10 +830,18 @@ const GameEngine = {
                 }
             }
             
-            // 🌟 關卡順序防偷跑解鎖邏輯 
+            // 🌟 關卡順序防偷跑解鎖邏輯 (含第三關人資審核卡點)
             if (detailsBlock) {
                 if (n === 1) {
                     detailsBlock.classList.remove('locked-details');
+                } else if (n === 4) {
+                    // 第四關特例：必須第三關提交(>=3) 且 後台「審核通過」才解鎖
+                    if (this.state.currentTrial >= 3 && isExamApproved) {
+                        detailsBlock.classList.remove('locked-details');
+                    } else {
+                        detailsBlock.classList.add('locked-details');
+                        detailsBlock.removeAttribute('open');
+                    }
                 } else {
                     if (this.state.currentTrial >= n - 1) {
                         detailsBlock.classList.remove('locked-details');

@@ -4,13 +4,14 @@
 const GameEngine = {
     // 🌟 [新增] 後台 API 設定區
     config: {
-        apiUrl: "https://script.google.com/macros/s/AKfycbwNpUyWblY-UiSCkxFh7hZRIY2DxY64Zkwplva1-qqxa8cV5gbPk2iDSMMvpshBx6gaSw/exec", // ← 第一步拿到的網址貼這！
+        apiUrl: "https://script.google.com/macros/s/AKfycbwQmT9fkBd5_98L9qTGAu6bCIREB9rnJaFWYMxgGeS9BMVMrGAua39UkYdUSVwFoSJrcw/exec", // ← 第一步拿到的網址貼這！
         // 🌟 自動抓取網址後方的 uid 參數 (例如 ?uid=EMP_001)，如果沒抓到，就預設拿 TEST_001 來墊檔測試
         uid: new URLSearchParams(window.location.search).get('uid') || "TEST_001" 
     },
 
     state: {
         score: 0,
+        backendRank: "", // 🌟 儲存從後台抓來的真實評級
         items: ['👕 粗製布衣'],
         location: '⛺ 新手村',
         status: '📦 檢整裝備中',
@@ -36,7 +37,8 @@ const GameEngine = {
             bonus: 0,
             hrEval: 0
         },
-        hasSeenAlert: false // 防止重新整理無限跳警告
+        hasSeenAlert: false, // 防止重新整理無限跳系統彈窗警告
+        hasSeenDoomFlash: false // 🌟 防止無限觸發奪命連環閃
     },
 
     ranks: [
@@ -120,7 +122,7 @@ const GameEngine = {
         document.head.appendChild(style);
     },
 
-    // 🌟 [修正] 與 GAS 後台通訊的非同步引擎 (改用 GET 避開 CORS 阻擋)
+    // 🌟 與 GAS 後台通訊的非同步引擎
     async syncWithBackend() {
         if (!this.config.apiUrl || this.config.apiUrl.includes("請把_WEB_APP")) return;
         try {
@@ -135,6 +137,14 @@ const GameEngine = {
                 if (res.data.appointmentTime) this.state.appointmentTime = res.data.appointmentTime;
                 if (res.data.appointmentLocation) this.state.appointmentLocation = res.data.appointmentLocation;
                 
+                // 🌟 同步後台的真實分數與評級，讓後台作為唯一的 Truth
+                if (res.data.currentScore !== "") {
+                    this.state.score = parseInt(res.data.currentScore, 10) || 0;
+                }
+                if (res.data.currentRank) {
+                    this.state.backendRank = res.data.currentRank;
+                }
+
                 // 替換畫面上的基本資料
                 document.querySelectorAll('.dyn-company').forEach(el => el.innerText = res.data.companyName || "MYs studio");
                 document.querySelectorAll('.dyn-team').forEach(el => el.innerText = res.data.team || "外場團隊");
@@ -143,8 +153,8 @@ const GameEngine = {
                 
                 this.updateUI();
                 
-                // 🚨 奪命連環閃判定
-                if (res.data.isOverdue) {
+                // 🚨 進化版奪命連環閃判定 (僅初次登入觸發)
+                if (res.data.isOverdue && !this.state.hasSeenDoomFlash) {
                     this.triggerDoomFlash();
                 }
             } else if (res.status === 'error') {
@@ -156,28 +166,43 @@ const GameEngine = {
         }
     },
     
-    // 🌟 [新增] 奪命連環閃 (Doom Flash) 特效
+    // 🌟 進化版：奪命連環閃特效 (字體閃爍與警告)
     triggerDoomFlash() {
-        // 避免重複觸發
         if (document.getElementById('doom-flash-overlay')) return;
+        
+        // 標記已看過，防止後續操作無限觸發
+        this.state.hasSeenDoomFlash = true;
+        this.save();
         
         const overlay = document.createElement('div');
         overlay.id = 'doom-flash-overlay';
-        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,0,0,0.4); z-index:99999; pointer-events:none; display:none;';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,0,0,0.8); z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; transition: background-color 0.2s;';
+        
+        overlay.innerHTML = `
+            <div id="doom-text-main" style="color:white; font-size:48px; font-weight:900; text-shadow: 2px 2px 10px rgba(0,0,0,0.8); margin-bottom: 20px;">⚠️ 警告！！</div>
+            <div id="doom-text-sub" style="color:#ffcccc; font-size:20px; font-weight:bold; max-width: 80%; line-height: 1.5; display: none;">
+                進度嚴重落後，冒險積分已遭系統扣減<br>請立即處理逾期之任務！
+            </div>
+            <button id="doom-btn-close" style="margin-top: 30px; padding: 12px 24px; font-size: 18px; font-weight: bold; background-color: #fbbf24; border: none; border-radius: 8px; cursor: pointer; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">我知道了</button>
+        `;
         document.body.appendChild(overlay);
         
-        // 黑屏紅閃 3 次
+        // 黑屏紅閃 (紅 -> 黑 -> 紅 -> 黑)
         let count = 0;
         const flashInterval = setInterval(() => {
-            overlay.style.display = overlay.style.display === 'none' ? 'block' : 'none';
+            overlay.style.backgroundColor = overlay.style.backgroundColor === 'rgba(255, 0, 0, 0.8)' ? 'rgba(0, 0, 0, 0.9)' : 'rgba(255, 0, 0, 0.8)';
             count++;
-            if (count >= 6) { // 閃3次 (開關共6次)
+            if (count >= 4) { // 閃2次 (狀態切換4次)
                 clearInterval(flashInterval);
-                overlay.remove();
-                // 閃完後跳出扣分警告
-                this.showSysAlert('danger', '🚨 系統嚴重警告', '您已超過任務規定期限！冒險積分持續扣減中，請立即補件！');
+                overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.85)'; // 最終定格在暗色背景
+                document.getElementById('doom-text-sub').style.display = 'block';
+                document.getElementById('doom-btn-close').style.display = 'block';
+                
+                document.getElementById('doom-btn-close').onclick = () => {
+                    overlay.remove();
+                };
             }
-        }, 150);
+        }, 300); // 每 0.3 秒切換一次顏色
     },
 
     // 🌟 針對單一特定元素進行閃爍特效
@@ -237,8 +262,6 @@ const GameEngine = {
     checkSystemAlerts() {
         if (this.state.hasSeenAlert) return;
 
-        // 這裡未來會從 GAS 取得實際扣分/加分狀態。目前用模擬邏輯。
-        // 假設如果網址有帶 ?alert=penalty 則跳扣分，帶 ?alert=bonus 則跳加分
         const urlParams = new URLSearchParams(window.location.search);
         const alertType = urlParams.get('alert');
 
@@ -300,12 +323,12 @@ const GameEngine = {
         this.createFloatingText(event, `+${scoreGain}`);
         if (toastMsg) this.showToast(toastMsg);
         
-        // 🌟 延遲優化：有通知等 3 秒，沒通知等 1 秒
         let delayTime = toastMsg ? 3000 : 1000;
 
         setTimeout(() => {
+            // 前台自我計算展示用的分數 (後續會被 syncWithBackend 覆蓋校正)
             this.state.score += scoreGain;
-            this.state.scoreDetails.baseAndExplore += scoreGain; // 記錄細項
+            this.state.scoreDetails.baseAndExplore += scoreGain;
             
             // 🌟 通知後台加分
             this.notifyBackendScore(id, scoreGain);
@@ -332,7 +355,7 @@ const GameEngine = {
         }, delayTime);
     },
 
-    // 🌟 [修正] 通知後台寫入加分紀錄 (改用 GET)
+    // 🌟 通知後台寫入加分紀錄 (改用 GET)
     async notifyBackendScore(field, score) {
         if (!this.config.apiUrl || this.config.apiUrl.includes("請把_WEB_APP")) return;
         try {
@@ -355,7 +378,7 @@ const GameEngine = {
             setTimeout(() => {
                 this.updateUI();
                 this.flashElement('score-text');
-            }, 1000); // 無通知，1秒後結算閃爍
+            }, 1000); 
         } else if (!isChecked && this.state.achievements.includes(id)) {
             // 反悔取消打勾時，扣回分數
             this.state.achievements = this.state.achievements.filter(a => a !== id);
@@ -371,7 +394,7 @@ const GameEngine = {
         const x = e.clientX || (e.touches && e.touches[0].clientX);
         const y = e.clientY || (e.touches && e.touches[0].clientY);
         const el = document.createElement('div');
-        el.className = 'floating-score'; // 🌟 確保是 floating-score
+        el.className = 'floating-score'; 
         el.innerText = text;
         el.style.left = `${x}px`;
         el.style.top = `${y}px`;
@@ -394,11 +417,17 @@ const GameEngine = {
     save() { localStorage.setItem('hero_progress', JSON.stringify(this.state)); },
 
     updateUI() {
-        const rank = this.ranks.find(r => this.state.score >= r.min) || this.ranks[this.ranks.length - 1];
+        // 🌟 判定階級邏輯：優先使用後台傳來的真實評級 (V欄)，如果沒有才使用前台自己的分數換算
+        let displayRankTitle = this.state.backendRank;
+        if (!displayRankTitle) {
+            const rankObj = this.ranks.find(r => this.state.score >= r.min) || this.ranks[this.ranks.length - 1];
+            displayRankTitle = rankObj.title;
+        }
+
         const rEl = document.getElementById('rank-text');
         const sEl = document.getElementById('status-tag');
         
-        if (rEl) rEl.innerHTML = `<span style="color:#fbbf24;">戰力：</span><span id="rank-name">${rank.title}</span>　｜　<span style="color:#fbbf24;">關卡：</span><span id="loc-text">${this.state.location}</span>`;
+        if (rEl) rEl.innerHTML = `<span style="color:#fbbf24;">戰力：</span><span id="rank-name">${displayRankTitle}</span>　｜　<span style="color:#fbbf24;">關卡：</span><span id="loc-text">${this.state.location}</span>`;
         if (sEl) sEl.innerHTML = `<span style="color:#8ab4f8;">道具：</span><span id="item-text">${this.state.items.join(' ')}</span>　｜　<span style="color:#8ab4f8;">狀態：</span><span id="dyn-status">${this.state.status}</span>`;
         
         const scoreEl = document.getElementById('score-text');
@@ -481,7 +510,7 @@ const GameEngine = {
         this.notifyBackendDate(type, formattedVal);
     },
 
-    // 🌟 [修正] 通知後台紀錄日期 (改用 GET)
+    // 🌟 通知後台紀錄日期 (改用 GET)
     async notifyBackendDate(dateType, dateValue) {
         if (!this.config.apiUrl || this.config.apiUrl.includes("請把_WEB_APP")) return;
         try {
@@ -515,6 +544,14 @@ const GameEngine = {
         if (this.state.currentTrial >= trialNum) return;
         if (trialNum === 5 && !this.canUnlockTrial5().can) { alert(this.canUnlockTrial5().reason); return; }
         
+        // 🌟 【防呆機制】第三關強制檢查日期鎖定
+        if (trialNum === 3) {
+            if (!this.state.examDateLocked || !this.state.resultDateLocked) {
+                alert("⚠️ 請先填寫並「鎖定」體檢相關日期（預計體檢日 ＆ 報告產出日），才能推進關卡！");
+                return;
+            }
+        }
+        
         const tData = this.trialsData[trialNum];
         
         // 🌟 立即更新按鈕狀態與本機資料，防連點
@@ -523,7 +560,13 @@ const GameEngine = {
         this.save(); 
         this.updateButtonStyles(); 
 
-        // 🌟 [修正] 通知後台紀錄闖關完成時間 (改用 GET)
+        // 🌟 【自動縮合】提交後，立刻把該關卡的下拉選單折疊起來
+        const detailsBlock = document.getElementById(`detail-trial-${trialNum}`);
+        if (detailsBlock) {
+            detailsBlock.removeAttribute('open');
+        }
+
+        // 🌟 通知後台紀錄闖關完成時間 (改用 GET)
         if (this.config.apiUrl && !this.config.apiUrl.includes("請把_WEB_APP")) {
             const fetchUrl = `${this.config.apiUrl}?action=completeTrial&uid=${encodeURIComponent(this.config.uid)}&trialNum=${encodeURIComponent(trialNum)}`;
             fetch(fetchUrl).catch(e => {});
@@ -589,12 +632,17 @@ const GameEngine = {
 
     // 🌟 史詩級大結局演出腳本 (支援重播模式與分數細項)
     showFinalAchievement(withFirework = true) {
-        const rank = this.ranks.find(r => this.state.score >= r.min) || this.ranks[this.ranks.length - 1];
+        // 優先使用後台傳來的真實評級
+        let displayRankTitle = this.state.backendRank;
+        if (!displayRankTitle) {
+            const rankObj = this.ranks.find(r => this.state.score >= r.min) || this.ranks[this.ranks.length - 1];
+            displayRankTitle = rankObj.title;
+        }
         
         // 抓取階級英文字母 (SS, S, A, B, C, D)
-        const rankLetter = rank.title.match(/[A-ZS]+/)?.[0] || 'D';
+        const rankLetter = displayRankTitle.match(/[A-ZS]+/)?.[0] || 'D';
         // 抓取完整稱號文字 (A級 菁英玩家)
-        const fullRankTitle = rank.title.replace(/.*?([A-ZSS]+級.*)/, '$1');
+        const fullRankTitle = displayRankTitle.replace(/.*?([A-ZSS]+級.*)/, '$1');
 
         // 抓取完成度 % (此時已包含第六關的 12%)
         const currentProg = document.getElementById('prog-val').innerText;
@@ -722,8 +770,9 @@ const GameEngine = {
                         const inputs = detailsBlock.querySelectorAll('input');
                         inputs.forEach(input => {
                             input.disabled = true;
+                            // 🌟 修正點：取消讓勾勾變淡的設定 (維持 opacity = 1)，但保持 disabled 唯讀模式
                             if(input.type === 'checkbox' || input.type === 'radio' || input.type === 'file') {
-                                input.style.opacity = "0.5";
+                                input.style.opacity = "1"; 
                                 input.style.cursor = "not-allowed";
                             }
                         });
@@ -745,7 +794,7 @@ const GameEngine = {
                 }
             }
             
-            // 🌟 關卡順序防偷跑解鎖邏輯 (不再預設展開第一關)
+            // 🌟 關卡順序防偷跑解鎖邏輯 
             if (detailsBlock) {
                 if (n === 1) {
                     detailsBlock.classList.remove('locked-details');
@@ -754,7 +803,8 @@ const GameEngine = {
                         detailsBlock.classList.remove('locked-details');
                     } else {
                         detailsBlock.classList.add('locked-details');
-                        detailsBlock.removeAttribute('open'); // 強制關閉並鎖定
+                        // 確保未解鎖關卡一定是關閉的
+                        detailsBlock.removeAttribute('open'); 
                     }
                 }
             }

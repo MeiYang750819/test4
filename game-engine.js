@@ -2,44 +2,44 @@
    【 ⚙️ GAME ENGINE - 最終完美版 (全自動網址抓取版) 】
    ================================================================ */
 const GameEngine = {
-    // 🌟 [新增] 後台 API 設定區
+    // 🌟 後台 API 設定區
     config: {
-        apiUrl: "https://script.google.com/macros/s/AKfycbzl3wgsoGZwMpR5_fQ-FZ-THg151schO7NN1MVxE2mkzjUM6MNOVxWdWn13gyShpD-4Rw/exec", // ← 第一步拿到的網址貼這！
-        // 🌟 自動抓取網址後方的 uid 參數 (例如 ?uid=EMP_001)，如果沒抓到，就預設拿 TEST_001 來墊檔測試
+        apiUrl: "https://script.google.com/macros/s/AKfycbwZeLnmyqkGZ9MaYEFDZl7epk7xM_wDWnnnt4S_riHNxmsKuMVbXOOh12dpajd12HbdUw/exec", 
         uid: new URLSearchParams(window.location.search).get('uid') || "TEST_001" 
     },
 
     state: {
         score: 0,
-        backendRank: "", // 🌟 儲存從後台抓來的真實評級
-        examStatus: "",  // 🌟 儲存從後台抓來的體檢審核狀態
+        backendRank: "", 
+        examStatus: "",  // 儲存從後台抓來的體檢審核狀態 (通過/退件)
         items: ['👕 粗製布衣'],
         location: '⛺ 新手村',
         status: '📦 檢整裝備中',
         achievements: [],
+        checkboxes: {}, // 🌟 記憶所有打勾狀態
         weaponType: null,
         currentTrial: 0,
         examDate: null,      
         examDateLocked: false,
         resultDate: null,    
         resultDateLocked: false,
+        changeDate: null,    // 🌟 體檢改期申請
+        changeDateLocked: false,
         bankDate: null,
         bankDateLocked: false,
-        bankStatus: null, /* 🌟 記錄銀行狀態 */
+        bankStatus: null, 
         
-        // 🌟 已將寫死的測試時間與地點拉掉，改為預設等待字樣，等待後台資料覆蓋
         appointmentTime: "等待公會發布...", 
         appointmentLocation: "等待公會發布...", 
         
-        // 🌟 新增：分數細項記錄 (供大結局結算與彈窗判定用)
         scoreDetails: {
             baseAndExplore: 0,
             penalty: 0,
             bonus: 0,
             hrEval: 0
         },
-        hasSeenAlert: false, // 防止重新整理無限跳系統彈窗警告
-        hasSeenDoomFlash: false // 🌟 防止無限觸發奪命連環閃
+        hasSeenAlert: false, 
+        hasSeenDoomFlash: false 
     },
 
     ranks: [
@@ -61,13 +61,12 @@ const GameEngine = {
         '🔱 鐵尖長槍': '🔱 鋼鐵戰矛', '🔱 鋼鐵戰矛': '🔱 破陣重矛', '🔱 破陣重矛': '🔱 龍膽銀槍', '🔱 龍膽銀槍': '🐉 滅世龍吟槍'
     },
 
-    // 🌟 重新分配進度條：前五關共 71%，第六關 12%，總合 83%
     trialsData: {
         1: { progGain: 14, loc: '🏰 登錄公會', scoreGain: 16 },
         2: { progGain: 14, loc: '📁 裝備盤點', scoreGain: 16 },
         3: { progGain: 17, loc: '🛡️ 裝備鑑定所', scoreGain: 21 },
         4: { progGain: 13, loc: '🎒 出征準備營', scoreGain: 16 },
-        5: { progGain: 13, loc: '💼 契約祭壇', scoreGain: 16 }, /* 第五關分數已拆至 checkbox */
+        5: { progGain: 13, loc: '💼 契約祭壇', scoreGain: 16 }, 
         6: { progGain: 12, loc: '👑 榮耀殿堂', scoreGain: 0 }
     },
 
@@ -79,25 +78,36 @@ const GameEngine = {
             const saved = localStorage.getItem('hero_progress');
             if (saved) { this.state = Object.assign({}, this.state, JSON.parse(saved)); }
         } catch (e) { localStorage.removeItem('hero_progress'); }
+        
         this.injectGlobalCSS();
         
-        // 🌟 啟動時向後台同步最新資料
+        // 🌟 綁定全網頁勾勾自動記憶功能
+        setTimeout(() => {
+            document.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+                if (this.state.checkboxes && this.state.checkboxes[chk.id]) {
+                    chk.checked = true;
+                }
+                chk.addEventListener('change', (e) => {
+                    if (!this.state.checkboxes) this.state.checkboxes = {};
+                    this.state.checkboxes[e.target.id] = e.target.checked;
+                    this.save();
+                });
+            });
+        }, 100);
+        
         this.syncWithBackend();
 
         setTimeout(() => { this.updateUI(); }, 50);
 
-        // 🌟 隱藏彩蛋：加上 ?delay=1 網址參數，直接觸發奪命連環閃警告！
         if (window.location.search.includes('delay=1')) {
             setTimeout(() => this.showDelayWarning(), 500);
         }
 
-        // 🌟 檢查是否需要跳出強提醒彈窗 (模擬從後台取得資料後的判定)
         this.checkSystemAlerts();
 
-        // 🌟 成就回顧機制：若已破關，重整網頁時直接顯示結算面板 (不放煙火)
         if (this.state.currentTrial >= 6) {
             setTimeout(() => {
-                this.showFinalAchievement(false); // 傳入 false 代表略過煙火
+                this.showFinalAchievement(false); 
             }, 800);
         }
     },
@@ -129,17 +139,24 @@ const GameEngine = {
                 cursor: pointer;
             }
             /* 🌟 鎖定後的文字強制變白與灰底 */
-            input:disabled {
+            input.locked-input {
                 color: #ffffff !important;
                 -webkit-text-fill-color: #ffffff !important;
                 opacity: 1 !important;
                 background-color: rgba(255, 255, 255, 0.1) !important;
+                border: 1px solid #555 !important;
             }
+            /* 🌟 輸入框通用樣式 */
+            .text-input-field {
+                background: #2a2a2a; color: #fff; border: 1px solid #fbbf24; 
+                padding: 4px 8px; border-radius: 4px; font-size: 14px; outline: none;
+                width: 150px; display: inline-block;
+            }
+            .text-input-field:focus { box-shadow: 0 0 5px #fbbf24; }
         `;
         document.head.appendChild(style);
     },
 
-    // 🌟 與 GAS 後台通訊的非同步引擎
     async syncWithBackend() {
         if (!this.config.apiUrl || this.config.apiUrl.includes("請把_WEB_APP")) return;
         try {
@@ -147,14 +164,12 @@ const GameEngine = {
             const response = await fetch(fetchUrl);
             const res = await response.json();
             
-            console.log("後台回應狀態:", res); // F12 可查看詳細報錯
+            console.log("後台回應狀態:", res); 
 
             if (res.status === 'success' && res.data) {
-                // 覆蓋前台的動態報到時地
                 if (res.data.appointmentTime) this.state.appointmentTime = res.data.appointmentTime;
                 if (res.data.appointmentLocation) this.state.appointmentLocation = res.data.appointmentLocation;
                 
-                // 🌟 同步後台的真實分數、評級與審核狀態
                 if (res.data.currentScore !== "") {
                     this.state.score = parseInt(res.data.currentScore, 10) || 0;
                 }
@@ -165,12 +180,24 @@ const GameEngine = {
                     this.state.examStatus = res.data.examStatus;
                 }
 
-                // 替換畫面上的基本資料
                 document.querySelectorAll('.dyn-company').forEach(el => el.innerText = res.data.companyName || "MYs studio");
                 document.querySelectorAll('.dyn-team').forEach(el => el.innerText = res.data.team || "外場團隊");
                 document.querySelectorAll('.dyn-type').forEach(el => el.innerText = res.data.type || "兼職");
                 document.querySelectorAll('.dyn-name').forEach(el => el.innerText = res.data.userName || "測試員");
                 
+                // 🌟 連動狀態列
+                if (this.state.currentTrial >= 6) {
+                    this.state.status = '👑 聖殿加冕';
+                } else if (this.state.examStatus === '退件') {
+                    this.state.status = '❌ 強化失敗';
+                } else if (this.state.examStatus === '通過') {
+                    this.state.status = '👑 鑑定通過';
+                } else if (this.state.currentTrial === 3) {
+                    this.state.status = '⏳ 提交公會審查';
+                } else {
+                    this.state.status = '📦 檢整裝備中';
+                }
+
                 this.updateUI();
                 
                 // 🚨 進化版奪命連環閃判定 (僅初次登入觸發)
@@ -186,11 +213,10 @@ const GameEngine = {
         }
     },
     
-    // 🌟 進化版：分段式奪命連環閃特效
+    // 🌟 進化版：三段式奪命連環閃特效
     async triggerDoomFlash() {
         if (document.getElementById('doom-flash-overlay')) return;
         
-        // 標記已看過，防止後續操作無限觸發
         this.state.hasSeenDoomFlash = true;
         this.save();
         
@@ -207,7 +233,6 @@ const GameEngine = {
         `;
         document.body.appendChild(overlay);
         
-        // 使用非同步等待來控制動畫流程
         const sleep = ms => new Promise(r => setTimeout(r, ms));
         const mainText = document.getElementById('doom-text-main');
         const subText = document.getElementById('doom-text-sub');
@@ -238,7 +263,6 @@ const GameEngine = {
         };
     },
 
-    // 🌟 針對單一特定元素進行閃爍特效
     flashElement(id) {
         const el = document.getElementById(id);
         if (el) {
@@ -248,7 +272,6 @@ const GameEngine = {
         }
     },
 
-    // 🌟 主線防具與奇遇武器的專屬升級邏輯
     upgradeArmor() {
         let currentArmor = this.state.items.find(item => this.armorPath.includes(item));
         if (currentArmor) {
@@ -272,7 +295,6 @@ const GameEngine = {
         return false;
     },
 
-    // 🌟 延宕奪命連環閃警告動畫
     showDelayWarning() {
         if(document.getElementById('delay-warning-overlay')) return;
         const overlay = document.createElement('div');
@@ -291,7 +313,6 @@ const GameEngine = {
         };
     },
 
-    // 🌟 強提醒彈窗系統 (模擬判定)
     checkSystemAlerts() {
         if (this.state.hasSeenAlert) return;
 
@@ -323,7 +344,6 @@ const GameEngine = {
         document.body.insertAdjacentHTML('beforeend', html);
     },
 
-    // 💰 解鎖機制 (大摺疊、小摺疊、隱藏武器、防具彩蛋)
     unlock(event, id, action) {
         if (this.state.achievements.includes(id)) return;
         this.state.achievements.push(id); 
@@ -359,11 +379,9 @@ const GameEngine = {
         let delayTime = toastMsg ? 3000 : 1000;
 
         setTimeout(() => {
-            // 前台自我計算展示用的分數 (後續會被 syncWithBackend 覆蓋校正)
             this.state.score += scoreGain;
             this.state.scoreDetails.baseAndExplore += scoreGain;
             
-            // 🌟 通知後台加分
             this.notifyBackendScore(id, scoreGain);
             
             if (action === 'explore_armor') {
@@ -388,16 +406,14 @@ const GameEngine = {
         }, delayTime);
     },
 
-    // 🌟 通知後台寫入加分紀錄 (改用 GET)
     async notifyBackendScore(field, score) {
-        if (!this.config.apiUrl || this.config.apiUrl.includes("請把_WEB_APP")) return;
+        if (!this.config.apiUrl || this.config.apiUrl.includes("請把_WEB_APP") || score === 0) return;
         try {
             const fetchUrl = `${this.config.apiUrl}?action=updateScore&uid=${encodeURIComponent(this.config.uid)}&field=${encodeURIComponent(field)}&score=${encodeURIComponent(score)}`;
             await fetch(fetchUrl);
         } catch(e) {}
     },
 
-    // 🌟 第五關可自由取消的獨立計分觸發器
     toggleTrial5Score(event, id) {
         const isChecked = event.target.checked;
         let scoreGain = 8;
@@ -413,7 +429,6 @@ const GameEngine = {
                 this.flashElement('score-text');
             }, 1000); 
         } else if (!isChecked && this.state.achievements.includes(id)) {
-            // 反悔取消打勾時，扣回分數
             this.state.achievements = this.state.achievements.filter(a => a !== id);
             this.state.score -= scoreGain;
             this.state.scoreDetails.baseAndExplore -= scoreGain;
@@ -423,7 +438,10 @@ const GameEngine = {
         }
     },
 
+    // 🌟 防呆：加分等於 0 的時候不要顯示浮空文字
     createFloatingText(e, text) {
+        if (text === '+0' || text === '-0') return; 
+        
         const x = e.clientX || (e.touches && e.touches[0].clientX);
         const y = e.clientY || (e.touches && e.touches[0].clientY);
         const el = document.createElement('div');
@@ -450,7 +468,6 @@ const GameEngine = {
     save() { localStorage.setItem('hero_progress', JSON.stringify(this.state)); },
 
     updateUI() {
-        // 🌟 判定階級邏輯：優先使用後台傳來的真實評級 (V欄)，如果沒有才使用前台自己的分數換算
         let displayRankTitle = this.state.backendRank;
         if (!displayRankTitle) {
             const rankObj = this.ranks.find(r => this.state.score >= r.min) || this.ranks[this.ranks.length - 1];
@@ -468,7 +485,6 @@ const GameEngine = {
         const scoreFill = document.getElementById('score-fill');
         if (scoreFill) scoreFill.style.width = Math.min(this.state.score, 100) + "%";
 
-        // 🌟 逼死強迫症：非整數進度條計算 (含第六關才會滿100%)
         let currentProg = 0;
         for(let i=1; i<=this.state.currentTrial; i++) {
             if(i <= 6) currentProg += this.trialsData[i].progGain;
@@ -492,6 +508,7 @@ const GameEngine = {
         this.updateButtonStyles();
     },
 
+    // 🌟 徹底解決鎖定日期消失與互斥的問題
     updateDateControls() {
         const dateFields = [
             { id: 'input-exam-date', btn: 'btn-lock-exam', val: this.state.examDate, locked: this.state.examDateLocked },
@@ -503,18 +520,34 @@ const GameEngine = {
             const input = document.getElementById(field.id);
             const btn = document.getElementById(field.btn);
             if (input && btn) {
-                input.value = field.val || "";
                 if (field.locked) {
-                    input.type = 'text'; // 🌟 鎖定後變形為純文字顯示
+                    // 鎖定狀態：轉為 text 才不會被洗掉
+                    input.type = 'text'; 
+                    input.value = field.val || ""; 
                     input.disabled = true;
+                    input.classList.add('locked-input');
                     btn.innerText = "已鎖定";
                     btn.disabled = true;
                     btn.style.opacity = "0.5";
                 } else {
                     input.type = 'date';
+                    input.classList.remove('locked-input');
                 }
             }
         });
+
+        // 🌟 針對「申請改期」的按鈕更新
+        const changeInput = document.getElementById('input-change-date');
+        const changeBtn = document.getElementById('btn-lock-change');
+        if (changeInput && changeBtn && this.state.changeDateLocked) {
+            changeInput.type = 'text';
+            changeInput.value = this.state.changeDate || "";
+            changeInput.disabled = true;
+            changeInput.classList.add('locked-input');
+            changeBtn.innerText = "✅ 已送出";
+            changeBtn.disabled = true;
+            changeBtn.style.opacity = "0.5";
+        }
     },
 
     lockDate(type) {
@@ -525,7 +558,6 @@ const GameEngine = {
         const confirmLock = confirm("鎖定就不能更改了喔，確定要鎖定嗎？");
         if (!confirmLock) return;
 
-        // 🌟 自動變換日期格式為 XXXX年XX月XX日
         const parts = val.split('-');
         let formattedVal = val;
         if(parts.length === 3) {
@@ -539,25 +571,39 @@ const GameEngine = {
         this.save(); 
         this.updateUI();
 
-        // 🌟 鎖定日期時同步寫入後台
         this.notifyBackendDate(type, formattedVal);
     },
 
-    // 🌟 通知後台紀錄日期 (改用 GET)
+    // 🌟 體檢改期申請邏輯 (包含接上後台)
+    requestChange() {
+        const val = document.getElementById('input-change-date').value;
+        if (!val) { alert("請先選擇要申請改期的日期！"); return; }
+        
+        const confirmLock = confirm("確定要送出改期申請嗎？");
+        if (!confirmLock) return;
+
+        const parts = val.split('-');
+        let formattedVal = val;
+        if(parts.length === 3) {
+            formattedVal = `${parts[0]}年${parts[1]}月${parts[2]}日`;
+        }
+
+        alert("🚨 已送出申請，請私訊人資承辦，核准後將為您解鎖，會因此扣分喔！");
+        
+        this.state.changeDate = formattedVal;
+        this.state.changeDateLocked = true;
+        this.save();
+        this.updateUI();
+        
+        this.notifyBackendDate('change', formattedVal);
+    },
+
     async notifyBackendDate(dateType, dateValue) {
         if (!this.config.apiUrl || this.config.apiUrl.includes("請把_WEB_APP")) return;
         try {
             const fetchUrl = `${this.config.apiUrl}?action=lockDate&uid=${encodeURIComponent(this.config.uid)}&dateType=${encodeURIComponent(dateType)}&dateValue=${encodeURIComponent(dateValue)}`;
             await fetch(fetchUrl);
         } catch(e) {}
-    },
-
-    requestChange() {
-        const val = document.getElementById('input-change-date').value;
-        if (!val) return;
-        alert("🚨 已送出申請，請私訊人資承辦，核准後將為您解鎖，會因此扣分喔！");
-        const btn = document.getElementById('btn-lock-change');
-        if (btn) { btn.disabled = true; btn.innerText = "申請"; btn.style.opacity = "0.5"; }
     },
 
     canUnlockTrial5() {
@@ -577,7 +623,6 @@ const GameEngine = {
         if (this.state.currentTrial >= trialNum) return;
         if (trialNum === 5 && !this.canUnlockTrial5().can) { alert(this.canUnlockTrial5().reason); return; }
         
-        // 🌟 【防呆機制】第三關強制檢查日期鎖定
         if (trialNum === 3) {
             if (!this.state.examDateLocked || !this.state.resultDateLocked) {
                 alert("⚠️ 請先填寫並「鎖定」體檢相關日期（預計體檢日 ＆ 報告產出日），才能推進關卡！");
@@ -587,28 +632,27 @@ const GameEngine = {
         
         const tData = this.trialsData[trialNum];
         
-        // 🌟 立即更新按鈕狀態與本機資料，防連點
         this.state.currentTrial = trialNum;
         this.state.location = tData.loc;
         this.save(); 
+        
+        // 🌟 改變狀態列
+        if (trialNum === 3) this.state.status = '⏳ 提交公會審查';
         this.updateButtonStyles(); 
 
-        // 🌟 【自動縮合】提交後，立刻把該關卡的下拉選單折疊起來
         const detailsBlock = document.getElementById(`detail-trial-${trialNum}`);
         if (detailsBlock) {
             detailsBlock.removeAttribute('open');
         }
 
-        // 🌟 通知後台紀錄闖關完成時間 (改用 GET)
         if (this.config.apiUrl && !this.config.apiUrl.includes("請把_WEB_APP")) {
             const fetchUrl = `${this.config.apiUrl}?action=completeTrial&uid=${encodeURIComponent(this.config.uid)}&trialNum=${encodeURIComponent(trialNum)}`;
             fetch(fetchUrl).catch(e => {});
         }
 
         if (trialNum === 6) {
-            // 🌟 拔除 Toast，改為 1.5 秒後直接進入大結局 (煙火動畫)
             setTimeout(() => {
-                this.showFinalAchievement(true); // 傳入 true 代表要放煙火
+                this.showFinalAchievement(true); 
                 if (this.upgradeArmor()) {}
                 if (this.upgradeWeapon()) {}
                 this.save(); 
@@ -618,7 +662,11 @@ const GameEngine = {
             let msg = trialNum === 3 ? '📣 此階段任務已完成，請稍待鑑定！' : '📣 此階段任務已完成，請繼續前進！';
             this.showToast(msg);
 
-            // 🌟 延遲 3 秒結算特效 (等待 Toast 消失)
+            // 🌟 過關瞬間飄出加分數字
+            if (tData.scoreGain > 0 && event) {
+                this.createFloatingText(event, `+${tData.scoreGain}`);
+            }
+
             setTimeout(() => {
                 if (trialNum !== 5) {
                     this.state.score += tData.scoreGain;
@@ -640,7 +688,6 @@ const GameEngine = {
         }
     },
 
-    // 🌟 檔案上傳模擬處理
     handleFileUpload(inputElement, chkId) {
         const file = inputElement.files[0];
         if (!file) return;
@@ -651,56 +698,46 @@ const GameEngine = {
         statusSpan.innerText = "⏳ 上傳中...";
         statusSpan.classList.remove('success');
 
-        // 模擬上傳延遲 1.5 秒
         setTimeout(() => {
             statusSpan.innerText = "✅ 已上傳";
             statusSpan.classList.add('success');
             if (chkBox) {
                 chkBox.checked = true;
-                // 不自動鎖死，讓同仁仍可操作
+                if (!this.state.checkboxes) this.state.checkboxes = {};
+                this.state.checkboxes[chkId] = true;
+                this.save();
             }
-            // 這裡未來會接 GAS 傳送檔案的邏輯
         }, 1500);
     },
 
-    // 🌟 史詩級大結局演出腳本 (支援重播模式與分數細項)
     showFinalAchievement(withFirework = true) {
-        // 優先使用後台傳來的真實評級
         let displayRankTitle = this.state.backendRank;
         if (!displayRankTitle) {
             const rankObj = this.ranks.find(r => this.state.score >= r.min) || this.ranks[this.ranks.length - 1];
             displayRankTitle = rankObj.title;
         }
         
-        // 抓取階級英文字母 (SS, S, A, B, C, D)
         const rankLetter = displayRankTitle.match(/[A-ZS]+/)?.[0] || 'D';
-        // 抓取完整稱號文字 (A級 菁英玩家)
         const fullRankTitle = displayRankTitle.replace(/.*?([A-ZSS]+級.*)/, '$1');
 
-        // 抓取完成度 % (此時已包含第六關的 12%)
         const currentProg = document.getElementById('prog-val').innerText;
 
-        // 🌟 更新版評價文字庫
         let evalStr = "";
         if(this.state.score >= 96) evalStr = "無懈可擊的執行力！<br>積極度與效率令人驚豔，未來的表現值得期待！";
         else if(this.state.score >= 80) evalStr = "穩健可靠地完成了所有準備，<br>這是一個好的開始，繼續保持這份用心！";
         else if(this.state.score >= 41) evalStr = "雖然過程有些波折，但總算完成試煉，<br>未來的任務請務必更加留意細節與時效喔！";
         else evalStr = "試煉過程充滿驚險，職場如同戰場，<br>請重新調整狀態，拿出更好的表現！";
 
-        // 裝備與嘲諷判定 (加上全形頓號)
         const weaponItem = this.state.items.find(i => Object.keys(this.weaponPaths).includes(i) || Object.values(this.weaponPaths).includes(i) || ['👑 王者之聖劍', '☄️ 破曉流星弓', '🐉 滅世龍吟槍'].includes(i)) || "";
         const armorItem = this.state.items.find(i => this.armorPath.includes(i)) || "";
         const finalEquip = [armorItem, weaponItem].filter(Boolean).join(' 、 '); 
 
         const hasWeapon = !!weaponItem;
-        // 🌟 嘲諷顏色調淡 (#ff8a8a)
         let mockeryHTML = !hasWeapon ? `<div class="fade-in-row mockery-text" style="animation: fadeUpIn 0.8s forwards 3.3s;">📝 系統額外判定：<br>勇者雖已通關，但未詳閱《鍛造秘笈》，<br>仍全程赤手空拳完成試煉...敬佩！敬佩！</div>` : "";
 
-        // 渲染結算面板的 HTML 結構 (綁定點擊背景關閉與分數明細)
         const renderModal = () => {
             if(document.getElementById('final-achievement-modal')) document.getElementById('final-achievement-modal').remove();
             
-            // 這裡的分數細項，之後會由 GAS 傳來的真實數據取代
             const baseScore = this.state.scoreDetails.baseAndExplore;
             const penalty = this.state.scoreDetails.penalty;
             const hrEval = this.state.scoreDetails.hrEval;
@@ -740,7 +777,6 @@ const GameEngine = {
                     </div>
                 </div>
             `;
-            // 點擊黑底也可關閉
             modal.onclick = () => {
                 modal.classList.remove('active');
                 setTimeout(()=>modal.remove(),300);
@@ -752,7 +788,6 @@ const GameEngine = {
         };
 
         if (withFirework) {
-            // 1. 放 CSS 粒子煙火 (停留 3 秒)
             const fw = document.createElement('div');
             fw.id = 'firework-overlay';
             fw.innerHTML = `
@@ -765,16 +800,14 @@ const GameEngine = {
             void fw.offsetWidth;
             fw.classList.add('active');
 
-            // 2. 煙火結束，浮現結算面板
             setTimeout(() => {
                 fw.classList.remove('active');
                 setTimeout(() => {
                     fw.remove();
                     renderModal();
                 }, 500);
-            }, 3000); // 🌟 煙火維持 3 秒
+            }, 3000); 
         } else {
-            // 無煙火模式 (重新登入時)，直接顯示面板
             renderModal();
         }
     },
@@ -789,8 +822,9 @@ const GameEngine = {
             6: "👑 聖殿區・已加冕"
         };
         
-        // 🌟 判斷人資是否審核通過體檢
-        const isExamApproved = (this.state.examStatus === true || this.state.examStatus === 'TRUE' || this.state.examStatus === '完成' || this.state.examStatus === '核准');
+        // 🌟 嚴格判定「通過」與「退件」
+        const isExamApproved = (this.state.examStatus === '通過');
+        const isExamRejected = (this.state.examStatus === '退件');
         
         const trials = [1, 2, 3, 4, 5, 6];
         trials.forEach(n => {
@@ -798,21 +832,21 @@ const GameEngine = {
             const detailsBlock = document.getElementById(`detail-trial-${n}`);
             
             if (btn) {
+                // 基本破關鎖定邏輯
                 if (this.state.currentTrial >= n) {
                     btn.disabled = true;
                     btn.innerText = lockedTexts[n];
+                    btn.style.backgroundColor = ""; // 恢復原色
                     
                     if (detailsBlock) {
                         const inputs = detailsBlock.querySelectorAll('input');
                         inputs.forEach(input => {
                             input.disabled = true;
-                            // 🌟 取消讓勾勾變淡的設定 (維持 opacity = 1)，但保持 disabled 唯讀模式
                             if(input.type === 'checkbox' || input.type === 'radio' || input.type === 'file') {
                                 input.style.opacity = "1"; 
                                 input.style.cursor = "not-allowed";
                             }
                         });
-                        // 鎖定上傳按鈕外觀
                         const uploadBtns = detailsBlock.querySelectorAll('.file-upload-btn');
                         uploadBtns.forEach(uBtn => {
                             uBtn.style.opacity = "0.5";
@@ -821,21 +855,39 @@ const GameEngine = {
                         });
                     }
 
-                    // 🌟 若是第六關破關按鈕，賦予「點擊回顧成就」功能
                     if (n === 6) {
-                        btn.disabled = false; // 解開 disabled 讓它可以被點
+                        btn.disabled = false; 
                         btn.style.cursor = "pointer";
                         btn.onclick = () => { this.showFinalAchievement(false); };
                     }
                 }
+
+                // 🌟 特例：第三關被退件，強制解鎖輸入框讓勇者重傳
+                if (n === 3 && isExamRejected) {
+                    btn.disabled = false;
+                    btn.innerText = "❌ 被退件・重新提交";
+                    btn.style.backgroundColor = "#ef4444"; // 變成紅色警告按鈕
+                    
+                    if (detailsBlock) {
+                        detailsBlock.querySelectorAll('input').forEach(input => {
+                            input.disabled = false;
+                            input.style.cursor = "pointer";
+                        });
+                        detailsBlock.querySelectorAll('.file-upload-btn').forEach(uBtn => {
+                            uBtn.style.opacity = "1";
+                            uBtn.style.cursor = "pointer";
+                            uBtn.style.pointerEvents = "auto";
+                        });
+                    }
+                }
             }
             
-            // 🌟 關卡順序防偷跑解鎖邏輯 (含第三關人資審核卡點)
+            // 🌟 關卡順序防偷跑解鎖邏輯 
             if (detailsBlock) {
                 if (n === 1) {
                     detailsBlock.classList.remove('locked-details');
                 } else if (n === 4) {
-                    // 第四關特例：必須第三關提交(>=3) 且 後台「審核通過」才解鎖
+                    // 第四關：必須第三關送出(>=3) 且 後台「通過」才解鎖
                     if (this.state.currentTrial >= 3 && isExamApproved) {
                         detailsBlock.classList.remove('locked-details');
                     } else {
@@ -847,49 +899,11 @@ const GameEngine = {
                         detailsBlock.classList.remove('locked-details');
                     } else {
                         detailsBlock.classList.add('locked-details');
-                        // 確保未解鎖關卡一定是關閉的
                         detailsBlock.removeAttribute('open'); 
                     }
                 }
             }
         });
-
-        // 🌟 恢復第五關的勾選狀態 (但未破關前不反灰鎖死)
-        if(this.state.achievements.includes('t5_score_1')) {
-            const chk = document.getElementById('chk-t5-1');
-            if (chk && this.state.currentTrial < 5) chk.checked = true; 
-        }
-        if(this.state.achievements.includes('t5_score_2')) {
-            const chk = document.getElementById('chk-t5-2');
-            if (chk && this.state.currentTrial < 5) chk.checked = true;
-        }
-
-        // 🌟 第六關霸道單選深度鎖定邏輯
-        const have = document.getElementById('chk-bank-have');
-        const process = document.getElementById('chk-bank-process');
-        const done = document.getElementById('chk-bank-done');
-        const bDate = document.getElementById('input-bank-date');
-        const bBtn = document.getElementById('btn-lock-bank');
-
-        if (have && process && done && this.state.currentTrial < 6) {
-            // 先全部解鎖恢復正常
-            have.disabled = false; process.disabled = false; done.disabled = false;
-            if(!this.state.bankDateLocked) { bDate.disabled = false; bBtn.disabled = false; }
-            
-            // 再依照狀態進行封印
-            if (this.state.bankStatus === 'have') {
-                have.checked = true;
-                process.disabled = true; done.disabled = true;
-                bDate.disabled = true; bBtn.disabled = true;
-            } else if (this.state.bankStatus === 'process') {
-                process.checked = true;
-                have.disabled = true; done.disabled = true;
-            } else if (this.state.bankStatus === 'done') {
-                done.checked = true;
-                have.disabled = true; process.disabled = true;
-                bDate.disabled = true; bBtn.disabled = true;
-            }
-        }
     }
 };
 window.addEventListener('load', () => GameEngine.init());

@@ -2,9 +2,8 @@
    【 ⚙️ GAME ENGINE - 最終完美版 (全自動網址抓取版) 】
    ================================================================ */
 const GameEngine = {
-    // 🌟 後台 API 設定區
     config: {
-        apiUrl: "https://script.google.com/macros/s/AKfycbwiod1Zjp33Zmjw0ShNIBm3tNRBOP-97Jx5VEL-QGjiaTzqJoXoMRHm5VTXp1Yz7H2zPQ/exec", 
+        apiUrl: "https://script.google.com/macros/s/AKfycbysnXt-SWAQwZ7lB7F8yaFHMNFD4rLMGdsrruuYbhvuDiE_5OlJpLQX9Gh1jmJc2oW54g/exec", 
         uid: new URLSearchParams(window.location.search).get('uid') || "TEST_001" 
     },
 
@@ -23,7 +22,8 @@ const GameEngine = {
         examDateLocked: false,
         resultDate: null,    
         resultDateLocked: false,
-        changeDate: null,    
+        changeDate: null,
+        changeReason: null,    
         changeDateLocked: false,
         bankDate: null,
         bankDateLocked: false,
@@ -136,7 +136,11 @@ const GameEngine = {
                 filter: invert(1);
                 cursor: pointer;
             }
+            /* 🌟 手機版防禦：脫掉系統預設的綠色/藍色外衣 */
             input.locked-input {
+                -webkit-appearance: none !important;
+                -moz-appearance: none !important;
+                appearance: none !important;
                 color: #ffffff !important;
                 -webkit-text-fill-color: #ffffff !important;
                 opacity: 1 !important;
@@ -175,6 +179,22 @@ const GameEngine = {
                 }
                 if (res.data.scoreDetails) {
                     this.state.scoreDetails = res.data.scoreDetails;
+                }
+
+                // 🌟 跨裝置同步：若後台進度大於前台，自動拉升等級與裝備
+                if (res.data.maxTrialCompleted && res.data.maxTrialCompleted > this.state.currentTrial) {
+                    this.state.currentTrial = res.data.maxTrialCompleted;
+                    this.state.location = this.state.currentTrial >= 6 ? this.trialsData[6].loc : this.trialsData[this.state.currentTrial].loc;
+                    
+                    // 自動追上防具等級
+                    for(let i = 0; i < this.state.currentTrial; i++) { this.upgradeArmor(); }
+                    // 若已通過第一關但沒武器，發放預設武器並追上等級
+                    if (this.state.currentTrial >= 1 && !this.state.weaponType) {
+                        this.state.weaponType = '🗡️ 精鋼短劍';
+                        this.state.items.push('🗡️ 精鋼短劍');
+                        for(let i = 0; i < this.state.currentTrial; i++) { this.upgradeWeapon(); }
+                    }
+                    this.save();
                 }
 
                 document.querySelectorAll('.dyn-company').forEach(el => el.innerText = res.data.companyName || "MYs studio");
@@ -539,14 +559,23 @@ const GameEngine = {
             }
         });
 
+        // 🌟 改期輸入框與原因框鎖定處理
         const changeInput = document.getElementById('input-change-date');
+        const changeReason = document.getElementById('input-change-reason');
         const changeBtn = document.getElementById('btn-lock-change');
         if (changeInput && changeBtn && this.state.changeDateLocked) {
             changeInput.type = 'text';
             changeInput.value = this.state.changeDate || "";
             changeInput.disabled = true;
             changeInput.classList.add('locked-input');
-            changeBtn.innerText = "已送出"; // 🌟 修改：不要勾勾，只有文字
+
+            if (changeReason) {
+                changeReason.value = this.state.changeReason || "";
+                changeReason.disabled = true;
+                changeReason.classList.add('locked-input');
+            }
+
+            changeBtn.innerText = "已送出"; 
             changeBtn.disabled = true;
             changeBtn.style.opacity = "0.5";
         }
@@ -576,9 +605,12 @@ const GameEngine = {
         this.notifyBackendDate(type, formattedVal);
     },
 
+    // 🌟 申請改期，連同原因打包送出
     requestChange() {
         const val = document.getElementById('input-change-date').value;
+        const reason = document.getElementById('input-change-reason') ? document.getElementById('input-change-reason').value : '';
         if (!val) { alert("請先選擇要申請改期的日期！"); return; }
+        if (!reason) { alert("請填寫申請更改原因！"); return; }
         
         const confirmLock = confirm("確定要送出改期申請嗎？");
         if (!confirmLock) return;
@@ -592,35 +624,35 @@ const GameEngine = {
         alert("🚨 已送出申請，請私訊人資承辦，核准後將為您解鎖，會因此扣分喔！");
         
         this.state.changeDate = formattedVal;
+        this.state.changeReason = reason;
         this.state.changeDateLocked = true;
         this.save();
         this.updateUI(false);
         
-        this.notifyBackendDate('change', formattedVal);
+        this.notifyBackendDate('change', formattedVal, reason);
     },
 
-    async notifyBackendDate(dateType, dateValue) {
+    async notifyBackendDate(dateType, dateValue, reason = '') {
         if (!this.config.apiUrl || this.config.apiUrl.includes("請把_WEB_APP")) return;
         try {
-            const fetchUrl = `${this.config.apiUrl}?action=lockDate&uid=${encodeURIComponent(this.config.uid)}&dateType=${encodeURIComponent(dateType)}&dateValue=${encodeURIComponent(dateValue)}`;
+            const fetchUrl = `${this.config.apiUrl}?action=lockDate&uid=${encodeURIComponent(this.config.uid)}&dateType=${encodeURIComponent(dateType)}&dateValue=${encodeURIComponent(dateValue)}&reason=${encodeURIComponent(reason)}`;
             await fetch(fetchUrl);
         } catch(e) {}
     },
 
-    // 🌟 精準時間卡點判斷 (針對第五關報到)
-    canUnlockTrial5() {
+    // 🌟 絕對卡點：移至第四關審核時間
+    canUnlockTrial4() {
         if (!this.state.appointmentTime || this.state.appointmentTime.includes("等待")) {
             return { can: false, reason: "⚠️ 尚未發布報到時間！" };
         }
         
         const now = new Date();
         const aptDateStr = this.state.appointmentTime.replace(/\//g, '-'); 
-        const aptTimeParts = aptDateStr.split(' ');
-        const timeStr = aptTimeParts[1] || '00:00'; 
-        
         const openTime = new Date(aptDateStr);
         
         if (now < openTime) {
+            const timeParts = aptDateStr.split(' ');
+            const timeStr = timeParts[1] || '00:00';
             return { can: false, reason: `⚠️ 營地大門深鎖\n請於 ${timeStr} 後再來！` };
         }
         return { can: true };
@@ -629,9 +661,9 @@ const GameEngine = {
     completeTrial(event, trialNum) {
         if (this.state.currentTrial >= trialNum) return;
         
-        // 🌟 報到時間卡點 (第五關)
-        if (trialNum === 5) {
-            const timeCheck = this.canUnlockTrial5();
+        // 🌟 時間卡點擋在第四關提交時
+        if (trialNum === 4) {
+            const timeCheck = this.canUnlockTrial4();
             if (!timeCheck.can) {
                 alert(timeCheck.reason);
                 return;
@@ -898,7 +930,6 @@ const GameEngine = {
                 }
             }
             
-            // 🌟 清除未解鎖關卡的無名氏勾勾干擾
             if (detailsBlock) {
                 if (n === 1) {
                     detailsBlock.classList.remove('locked-details');

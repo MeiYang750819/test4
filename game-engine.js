@@ -55,7 +55,6 @@ const GameEngine = {
 
     armorPath: ['👕 粗製布衣', '🧥 強化布衫', '🥋 實習皮甲', '🦺 輕型鎖甲', '🛡️ 鋼鐵重甲', '💠 秘銀胸甲', '🛡️ 聖光戰鎧', '🌟 永恆守護鎧'],
     
-    // 🌟 全新進化樹：武器擴充至 6 階
     weaponPaths: {
         '🗡️ 精鋼短劍': '⚔️ 騎士長劍', '⚔️ 騎士長劍': '⚔️ 破甲重劍', '⚔️ 破甲重劍': '⚔️ 斬星巨劍', '⚔️ 斬星巨劍': '🗡️ 聖光戰劍', '🗡️ 聖光戰劍': '👑 王者之聖劍',
         '🏹 獵人短弓': '🏹 精靈長弓', '🏹 精靈長弓': '🏹 迅雷連弓', '🏹 迅雷連弓': '🏹 穿雲幻弓', '🏹 穿雲幻弓': '🏹 追風神弓', '🏹 追風神弓': '☄️ 破曉流星弓',
@@ -136,7 +135,6 @@ const GameEngine = {
                 filter: invert(1);
                 cursor: pointer;
             }
-            /* 🌟 手機版防禦：脫掉系統預設的綠色/藍色外衣 */
             input.locked-input {
                 -webkit-appearance: none !important;
                 -moz-appearance: none !important;
@@ -181,14 +179,11 @@ const GameEngine = {
                     this.state.scoreDetails = res.data.scoreDetails;
                 }
 
-                // 🌟 跨裝置同步：若後台進度大於前台，自動拉升等級與裝備
                 if (res.data.maxTrialCompleted && res.data.maxTrialCompleted > this.state.currentTrial) {
                     this.state.currentTrial = res.data.maxTrialCompleted;
                     this.state.location = this.state.currentTrial >= 6 ? this.trialsData[6].loc : this.trialsData[this.state.currentTrial].loc;
                     
-                    // 自動追上防具等級
                     for(let i = 0; i < this.state.currentTrial; i++) { this.upgradeArmor(); }
-                    // 若已通過第一關但沒武器，發放預設武器並追上等級
                     if (this.state.currentTrial >= 1 && !this.state.weaponType) {
                         this.state.weaponType = '🗡️ 精鋼短劍';
                         this.state.items.push('🗡️ 精鋼短劍');
@@ -559,7 +554,6 @@ const GameEngine = {
             }
         });
 
-        // 🌟 改期輸入框與原因框鎖定處理
         const changeInput = document.getElementById('input-change-date');
         const changeReason = document.getElementById('input-change-reason');
         const changeBtn = document.getElementById('btn-lock-change');
@@ -605,7 +599,6 @@ const GameEngine = {
         this.notifyBackendDate(type, formattedVal);
     },
 
-    // 🌟 申請改期，連同原因打包送出
     requestChange() {
         const val = document.getElementById('input-change-date').value;
         const reason = document.getElementById('input-change-reason') ? document.getElementById('input-change-reason').value : '';
@@ -640,7 +633,6 @@ const GameEngine = {
         } catch(e) {}
     },
 
-    // 🌟 絕對卡點：移至第四關審核時間
     canUnlockTrial4() {
         if (!this.state.appointmentTime || this.state.appointmentTime.includes("等待")) {
             return { can: false, reason: "⚠️ 尚未發布報到時間！" };
@@ -661,7 +653,6 @@ const GameEngine = {
     completeTrial(event, trialNum) {
         if (this.state.currentTrial >= trialNum) return;
         
-        // 🌟 時間卡點擋在第四關提交時
         if (trialNum === 4) {
             const timeCheck = this.canUnlockTrial4();
             if (!timeCheck.can) {
@@ -727,6 +718,7 @@ const GameEngine = {
         }
     },
 
+    // 🌟 上傳文字改為乾淨的「已上傳」
     handleFileUpload(inputElement, chkId) {
         const file = inputElement.files[0];
         if (!file) return;
@@ -738,7 +730,7 @@ const GameEngine = {
         statusSpan.classList.remove('success');
 
         setTimeout(() => {
-            statusSpan.innerText = "✅ 已上傳";
+            statusSpan.innerText = "已上傳"; 
             statusSpan.classList.add('success');
             if (chkBox) {
                 chkBox.checked = true;
@@ -749,6 +741,7 @@ const GameEngine = {
         }, 1500);
     },
 
+    // 🌟 結算明細無條件顯示 0 分
     showFinalAchievement(withFirework = true) {
         let displayRankTitle = this.state.backendRank;
         if (!displayRankTitle) {
@@ -782,14 +775,17 @@ const GameEngine = {
             const delayPenalty = this.state.scoreDetails.delayPenalty;
             const hrEval = this.state.scoreDetails.hrEval;
             
+            let earlyBirdStr = `+${earlyBird}`;
+            let hrEvalStr = hrEval >= 0 ? `+${hrEval}` : hrEval;
+            
             let detailHtml = `
                 <div style="font-size: 13px; color: #888; margin-left: 10px; margin-top: 5px; line-height: 1.4;">
                     └ 🗺️ 基礎探索積分：${baseScore} 分<br>
+                    └ ⚡ 高效早鳥紅利：<span style="color:#4ade80;">${earlyBirdStr} 分</span><br>
+                    └ ⏳ 任務延宕損耗：<span style="color:#ff8a8a;">${delayPenalty} 分</span><br>
+                    └ 👁️ 公會長老評鑑：<span style="${hrEval >= 0 ? 'color:#4ade80;' : 'color:#ff8a8a;'}">${hrEvalStr} 分</span><br>
+                </div>
             `;
-            if (earlyBird > 0) detailHtml += `└ ⚡ 高效早鳥紅利：<span style="color:#4ade80;">+${earlyBird} 分</span><br>`;
-            if (delayPenalty < 0) detailHtml += `└ ⏳ 任務延宕損耗：<span style="color:#ff8a8a;">${delayPenalty} 分</span><br>`;
-            if (hrEval !== 0) detailHtml += `└ 👁️ 公會長老評鑑：<span style="${hrEval > 0 ? 'color:#4ade80;' : 'color:#ff8a8a;'}">${hrEval > 0 ? '+'+hrEval : hrEval} 分</span><br>`;
-            detailHtml += `</div>`;
 
             const modal = document.createElement('div');
             modal.id = 'final-achievement-modal';

@@ -191,19 +191,10 @@ margin: 20px 0;
     <label class="check-item" style="margin-left: 10px; margin-bottom: 12px;"><input type="checkbox" class="chk-trial3" id="chk-photo"> 兩吋照片一張</label>
 
     <div class="upload-group">
-        <label class="check-item" style="margin:0;"><input type="checkbox" id="chk-nh" onclick="return false;"> 前份工作健保轉出證明 -新鮮人免附</label>
+        <label class="check-item" style="margin:0;"><input type="checkbox" id="chk-nh"> 前份工作健保轉出證明 -新鮮人免附</label>
         <div style="display:flex; align-items:center; gap:5px;">
             <input type="file" id="file-nh" style="display:none;" onchange="GameEngine.handleFileUpload(this, 'chk-nh')">
             <button class="file-upload-btn" onclick="document.getElementById('file-nh').click()">上傳</button>
-            <span class="upload-status"></span>
-        </div>
-    </div>
-
-    <div class="upload-group">
-        <label class="check-item" style="margin:0;"><input type="checkbox" id="chk-leave" onclick="return false;"> 前份工作離職證明 -新鮮人免附</label>
-        <div style="display:flex; align-items:center; gap:5px;">
-            <input type="file" id="file-leave" style="display:none;" onchange="GameEngine.handleFileUpload(this, 'chk-leave')">
-            <button class="file-upload-btn" onclick="document.getElementById('file-leave').click()">上傳</button>
             <span class="upload-status"></span>
         </div>
     </div>
@@ -213,8 +204,12 @@ margin: 20px 0;
 <span class="tracking-header">🕒 體檢進度追蹤</span>
 <div class="date-row"><label>預計體檢日期：</label><input type="date" id="input-exam-date"><button class="btn-lock" id="btn-lock-exam" onclick="GameEngine.lockDate('exam')">鎖定</button></div>
 <div class="date-row"><label>報告預計產出：</label><input type="date" id="input-result-date"><button class="btn-lock" id="btn-lock-result" onclick="GameEngine.lockDate('result')">鎖定</button></div>
-<div class="date-row"><label>申請更改日期：</label><input type="date" id="input-change-date"></div>
-<div class="date-row"><label>申請更改原因：</label><input type="text" id="input-change-reason" class="text-input-field" style="flex:2;" placeholder="請簡述原因"><button class="btn-lock" id="btn-lock-change" onclick="GameEngine.requestChange()">送出</button></div>
+<div class="date-row">
+<label>申請更改日期與原因：</label>
+<input type="date" id="input-change-date">
+<input type="text" id="input-change-reason" class="text-input-field" style="flex:2;" placeholder="請簡述原因">
+<button class="btn-lock" id="btn-lock-change" onclick="GameEngine.requestChange()">送出</button>
+</div>
 
 <div class="lock-note">
 ⚠️ 日期一經鎖定無法修改,若需調整請洽人資承辦.<br>
@@ -315,7 +310,6 @@ if (typeof GameEngine !== 'undefined') { GameEngine.init(); }
 
 function checkTrial1(e) { if (!document.getElementById('chk-guide').checked || !document.getElementById('chk-forge').checked || !document.getElementById('chk-risk').checked) { alert("⚠️ 勇主請注意\n必須勾選所有確認項目，才能推進！"); return; } GameEngine.completeTrial(e, 1); }
 
-// 🌟 強制檢查前兩個檔案必須完成上傳
 function checkTrial3(e) { 
     const examNormal = document.getElementById('chk-exam-normal');
     const examFood = document.getElementById('chk-exam-food');

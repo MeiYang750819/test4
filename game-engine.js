@@ -3,13 +3,17 @@
    說明：負責所有前端邏輯、雲端資料同步、裝備進化與關卡進度控制。
    ================================================================ */
 
+const urlParams = new URLSearchParams(window.location.search);
+const currentUser = urlParams.get('uid') || urlParams.get('id') || "TEST_001";
+
 const GameEngine = {
     // 🌟 核心設定 (支援 id 與 uid 雙參數)
     config: {
         apiUrl: "https://script.google.com/macros/s/AKfycbyZu8UpQXk4KWTTlleT5F0gqxIG4XakMhE4m_svGUXJ_uSV_6rVB5_OiPUVH2VKn-BZZA/exec",
-        uid: new URLSearchParams(window.location.search).get('uid') || new URLSearchParams(window.location.search).get('id') || "TEST_001"
+        uid: currentUser
     },
 
+    // 🌟 勇者當前狀態記憶
     state: {
         score: 0,
         backendRank: "",
@@ -42,6 +46,7 @@ const GameEngine = {
         hasSeenDoomFlash: false
     },
 
+    // 🌟 階級定義
     ranks: [
         { min: 101, title: "💎 SS級 神話級玩家" },
         { min: 96,  title: "🌟 S級 傳說級玩家" },
@@ -53,17 +58,40 @@ const GameEngine = {
         { min: 0,   title: "🥚 報到新手村" }
     ],
 
+    // 🌟 防具進化路線
     armorPath: [
-        '👕 粗製布衣', '🧥 強化布衫', '🥋 實習皮甲', '🦺 輕型鎖甲', 
-        '🛡️ 鋼鐵重甲', '💠 秘銀胸甲', '🛡️ 聖光戰鎧', '🌟 永恆守護鎧'
+        '👕 粗製布衣',
+        '🧥 強化布衫',
+        '🥋 實習皮甲',
+        '🦺 輕型鎖甲',
+        '🛡️ 鋼鐵重甲',
+        '💠 秘銀胸甲',
+        '🛡️ 聖光戰鎧',
+        '🌟 永恆守護鎧'
     ],
 
+    // 🌟 武器六階級進化樹
     weaponPaths: {
-        '🗡️ 精鋼短劍': '⚔️ 騎士長劍', '⚔️ 騎士長劍': '⚔️ 破甲重劍', '⚔️ 破甲重劍': '⚔️ 斬星巨劍', '⚔️ 斬星巨劍': '🗡️ 聖光戰劍', '🗡️ 聖光戰劍': '👑 王者之聖劍',
-        '🏹 獵人短弓': '🏹 精靈長弓', '🏹 精靈長弓': '🏹 迅雷連弓', '🏹 迅雷連弓': '🏹 穿雲幻弓', '🏹 穿雲幻弓': '🏹 追風神弓', '🏹 追風神弓': '☄️ 破曉流星弓',
-        '🔱 鐵尖長槍': '🔱 鋼鐵戰矛', '🔱 鋼鐵戰矛': '🔱 破陣重矛', '🔱 破陣重矛': '🔱 雷霆戰戟', '🔱 雷霆戰戟': '🔱 龍膽銀槍', '🔱 龍膽銀槍': '🐉 滅世龍吟槍'
+        '🗡️ 精鋼短劍': '⚔️ 騎士長劍',
+        '⚔️ 騎士長劍': '⚔️ 破甲重劍',
+        '⚔️ 破甲重劍': '⚔️ 斬星巨劍',
+        '⚔️ 斬星巨劍': '🗡️ 聖光戰劍',
+        '🗡️ 聖光戰劍': '👑 王者之聖劍',
+
+        '🏹 獵人短弓': '🏹 精靈長弓',
+        '🏹 精靈長弓': '🏹 迅雷連弓',
+        '🏹 迅雷連弓': '🏹 穿雲幻弓',
+        '🏹 穿雲幻弓': '🏹 追風神弓',
+        '🏹 追風神弓': '☄️ 破曉流星弓',
+
+        '🔱 鐵尖長槍': '🔱 鋼鐵戰矛',
+        '🔱 鋼鐵戰矛': '🔱 破陣重矛',
+        '🔱 破陣重矛': '🔱 雷霆戰戟',
+        '🔱 雷霆戰戟': '🔱 龍膽銀槍',
+        '🔱 龍膽銀槍': '🐉 滅世龍吟槍'
     },
 
+    // 🌟 關卡與進度權重
     trialsData: {
         1: { progGain: 14, loc: '🏰 登錄公會' },
         2: { progGain: 14, loc: '📁 裝備盤點' },
@@ -73,7 +101,7 @@ const GameEngine = {
         6: { progGain: 12, loc: '👑 榮耀殿堂' }
     },
 
-    // 🌟 取出個人專屬記憶櫃 Key
+    // 🌟 取出個人專屬記憶櫃 Key (防 001 與 002 錯亂)
     getStorageKey() {
         return 'hero_progress_' + this.config.uid;
     },
@@ -133,6 +161,16 @@ const GameEngine = {
             }
             .game-toast.show { right: 20px; }
             
+            .floating-score {
+                position: fixed; color: #4ade80; font-size: 24px; font-weight: bold;
+                text-shadow: 0 0 8px rgba(0,0,0,0.8); pointer-events: none; z-index: 10000;
+                animation: floatUp 1.5s ease-out forwards;
+            }
+            @keyframes floatUp {
+                0% { opacity: 1; transform: translateY(0) scale(1); }
+                100% { opacity: 0; transform: translateY(-50px) scale(1.5); }
+            }
+
             input.locked-input {
                 -webkit-appearance: none !important;
                 -moz-appearance: none !important;
@@ -270,14 +308,21 @@ const GameEngine = {
         return false;
     },
 
-    unlock(event, id, action, scoreGain = 0) {
+    // 🌟 彩蛋解鎖邏輯 (支援你 HTML 裡的五個參數寫法)
+    unlock(event, id, action, title, scoreGain) {
+        if (typeof title === 'number') {
+            scoreGain = title; // 如果只傳了四個參數，自動對位
+        }
         if (this.state.achievements.includes(id)) return;
+        
         this.state.achievements.push(id);
         this.save();
+        
         if (scoreGain > 0) {
             this.state.score += scoreGain;
             this.state.scoreDetails.base += scoreGain;
             this.createFloatingText(event, `+${scoreGain}`);
+            
             fetch(`${this.config.apiUrl}?action=updateScore&uid=${encodeURIComponent(this.config.uid)}&field=${encodeURIComponent(id)}&score=${encodeURIComponent(scoreGain)}`);
             setTimeout(() => { this.updateUI(true); }, 1000);
         }
@@ -300,7 +345,7 @@ const GameEngine = {
     },
 
     createFloatingText(e, text) {
-        if (text === '+0') return; 
+        if (text === '+0' || !text) return; 
         const x = e.clientX || (e.touches && e.touches[0].clientX);
         const y = e.clientY || (e.touches && e.touches[0].clientY);
         const el = document.createElement('div');
@@ -423,8 +468,7 @@ const GameEngine = {
         const dateVal = document.getElementById('input-change-date').value;
         const reasonVal = document.getElementById('input-change-reason') ? document.getElementById('input-change-reason').value : '';
         
-        if (!dateVal) { alert("請先選擇要申請改期的日期！"); return; }
-        if (!reasonVal) { alert("請填寫申請更改原因！"); return; }
+        if (!dateVal || !reasonVal) { alert("請填寫預計日期與改期原因！"); return; }
         
         const confirmLock = confirm("確定要送出改期申請嗎？這將會累計扣除積分！");
         if (!confirmLock) return;
@@ -590,7 +634,7 @@ const GameEngine = {
             const block = document.getElementById(`detail-trial-${n}`);
             if (!btn || !block) continue;
 
-            // 🌟 封印狀態：強力鎖定並自動打滿勾勾
+            // 🌟 封印狀態：強制打滿勾勾並鎖定
             if (this.state.currentTrial >= n) {
                 btn.disabled = true;
                 btn.innerText = lockedTexts[n];

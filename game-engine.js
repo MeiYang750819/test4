@@ -7,13 +7,11 @@ const urlParams = new URLSearchParams(window.location.search);
 const currentUser = urlParams.get('uid') || urlParams.get('id') || "TEST_001";
 
 const GameEngine = {
-    // 🌟 核心設定 (支援 id 與 uid 雙參數)
     config: {
         apiUrl: "https://script.google.com/macros/s/AKfycbyZu8UpQXk4KWTTlleT5F0gqxIG4XakMhE4m_svGUXJ_uSV_6rVB5_OiPUVH2VKn-BZZA/exec",
         uid: currentUser
     },
 
-    // 🌟 勇者當前狀態記憶
     state: {
         score: 0,
         backendRank: "",
@@ -46,7 +44,6 @@ const GameEngine = {
         hasSeenDoomFlash: false
     },
 
-    // 🌟 階級定義
     ranks: [
         { min: 101, title: "💎 SS級 神話級玩家" },
         { min: 96,  title: "🌟 S級 傳說級玩家" },
@@ -58,40 +55,17 @@ const GameEngine = {
         { min: 0,   title: "🥚 報到新手村" }
     ],
 
-    // 🌟 防具進化路線
     armorPath: [
-        '👕 粗製布衣',
-        '🧥 強化布衫',
-        '🥋 實習皮甲',
-        '🦺 輕型鎖甲',
-        '🛡️ 鋼鐵重甲',
-        '💠 秘銀胸甲',
-        '🛡️ 聖光戰鎧',
-        '🌟 永恆守護鎧'
+        '👕 粗製布衣', '🧥 強化布衫', '🥋 實習皮甲', '🦺 輕型鎖甲',
+        '🛡️ 鋼鐵重甲', '💠 秘銀胸甲', '🛡️ 聖光戰鎧', '🌟 永恆守護鎧'
     ],
 
-    // 🌟 武器六階級進化樹
     weaponPaths: {
-        '🗡️ 精鋼短劍': '⚔️ 騎士長劍',
-        '⚔️ 騎士長劍': '⚔️ 破甲重劍',
-        '⚔️ 破甲重劍': '⚔️ 斬星巨劍',
-        '⚔️ 斬星巨劍': '🗡️ 聖光戰劍',
-        '🗡️ 聖光戰劍': '👑 王者之聖劍',
-
-        '🏹 獵人短弓': '🏹 精靈長弓',
-        '🏹 精靈長弓': '🏹 迅雷連弓',
-        '🏹 迅雷連弓': '🏹 穿雲幻弓',
-        '🏹 穿雲幻弓': '🏹 追風神弓',
-        '🏹 追風神弓': '☄️ 破曉流星弓',
-
-        '🔱 鐵尖長槍': '🔱 鋼鐵戰矛',
-        '🔱 鋼鐵戰矛': '🔱 破陣重矛',
-        '🔱 破陣重矛': '🔱 雷霆戰戟',
-        '🔱 雷霆戰戟': '🔱 龍膽銀槍',
-        '🔱 龍膽銀槍': '🐉 滅世龍吟槍'
+        '🗡️ 精鋼短劍': '⚔️ 騎士長劍', '⚔️ 騎士長劍': '⚔️ 破甲重劍', '⚔️ 破甲重劍': '⚔️ 斬星巨劍', '⚔️ 斬星巨劍': '🗡️ 聖光戰劍', '🗡️ 聖光戰劍': '👑 王者之聖劍',
+        '🏹 獵人短弓': '🏹 精靈長弓', '🏹 精靈長弓': '🏹 迅雷連弓', '🏹 迅雷連弓': '🏹 穿雲幻弓', '🏹 穿雲幻弓': '🏹 追風神弓', '🏹 追風神弓': '☄️ 破曉流星弓',
+        '🔱 鐵尖長槍': '🔱 鋼鐵戰矛', '🔱 鋼鐵戰矛': '🔱 破陣重矛', '🔱 破陣重矛': '🔱 雷霆戰戟', '🔱 雷霆戰戟': '🔱 龍膽銀槍', '🔱 龍膽銀槍': '🐉 滅世龍吟槍'
     },
 
-    // 🌟 關卡與進度權重
     trialsData: {
         1: { progGain: 14, loc: '🏰 登錄公會' },
         2: { progGain: 14, loc: '📁 裝備盤點' },
@@ -101,7 +75,6 @@ const GameEngine = {
         6: { progGain: 12, loc: '👑 榮耀殿堂' }
     },
 
-    // 🌟 取出個人專屬記憶櫃 Key (防 001 與 002 錯亂)
     getStorageKey() {
         return 'hero_progress_' + this.config.uid;
     },
@@ -109,7 +82,6 @@ const GameEngine = {
     init() {
         document.querySelectorAll('details').forEach(el => el.removeAttribute('open'));
 
-        // 讀取個人專屬快取
         try {
             const saved = localStorage.getItem(this.getStorageKey());
             if (saved) {
@@ -181,11 +153,6 @@ const GameEngine = {
                 background-color: rgba(255, 255, 255, 0.1) !important;
                 border: 1px solid #555 !important;
             }
-            .text-input-field {
-                background: #2a2a2a; color: #fff; border: 1px solid #fbbf24; 
-                padding: 4px 8px; border-radius: 4px; font-size: 14px; outline: none;
-            }
-            .text-input-field:focus { box-shadow: 0 0 5px #fbbf24; }
         `;
         document.head.appendChild(style);
     },
@@ -308,10 +275,9 @@ const GameEngine = {
         return false;
     },
 
-    // 🌟 彩蛋解鎖邏輯 (支援你 HTML 裡的五個參數寫法)
     unlock(event, id, action, title, scoreGain) {
         if (typeof title === 'number') {
-            scoreGain = title; // 如果只傳了四個參數，自動對位
+            scoreGain = title;
         }
         if (this.state.achievements.includes(id)) return;
         
@@ -363,7 +329,6 @@ const GameEngine = {
         setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 500); }, 3000);
     },
 
-    // 🌟 存入個人專屬記憶櫃
     save() {
         localStorage.setItem(this.getStorageKey(), JSON.stringify(this.state));
     },
@@ -614,7 +579,7 @@ const GameEngine = {
         if (withFirework) { setTimeout(render, 1500); } else { render(); }
     },
 
-    // 🌟 更新封印與勾勾狀態
+    // 🌟 更新封印與強制打勾狀態
     updateButtonStyles() {
         const lockedTexts = {
             1: "🔒 啟程點・已封印",
@@ -643,7 +608,7 @@ const GameEngine = {
                 
                 block.querySelectorAll('input').forEach(i => {
                     if (i.type === 'checkbox') {
-                        i.checked = true; // 強制自動打勾
+                        i.checked = true; // 強制打滿勾勾
                     }
                     i.disabled = true;
                     if (i.type === 'checkbox' || i.type === 'radio' || i.type === 'file') {
@@ -667,7 +632,6 @@ const GameEngine = {
                 }
             }
 
-            // 第三關審核特效
             if (n === 3) {
                 if (this.state.currentTrial >= 3 && isApproved) {
                     btn.innerText = "✅ 鑑定通過";
@@ -689,7 +653,6 @@ const GameEngine = {
                 }
             }
 
-            // 關卡順序防呆折疊
             if (n === 4 && !(this.state.currentTrial >= 3 && isApproved)) {
                 block.classList.add('locked-details');
                 block.removeAttribute('open');

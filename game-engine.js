@@ -1,10 +1,17 @@
 /* ================================================================
-   【 ⚙️ GAME ENGINE - 終極同步完美版 (全展開) 】
-   說明：負責所有前端邏輯、雲端資料同步、裝備進化與關卡進度控制。
+   【 ⚙️ GAME ENGINE - 完美展開與防失憶版 】
    ================================================================ */
 
+// 🌟 1. 雙重參數攔截與失憶症治癒邏輯
 const urlParams = new URLSearchParams(window.location.search);
-const currentUser = urlParams.get('uid') || urlParams.get('id') || "TEST_001";
+let currentUser = urlParams.get('uid') || urlParams.get('id');
+
+// 如果網址有帶 ID，死死鎖進瀏覽器深處；如果沒有，從深處拿出來
+if (currentUser) {
+    localStorage.setItem('hero_current_id', currentUser);
+} else {
+    currentUser = localStorage.getItem('hero_current_id') || "TEST_001";
+}
 
 const GameEngine = {
     config: {
@@ -67,20 +74,30 @@ const GameEngine = {
     },
 
     trialsData: {
-        1: { progGain: 14, loc: '🏰 登錄公會' },
-        2: { progGain: 14, loc: '📁 裝備盤點' },
-        3: { progGain: 17, loc: '🛡️ 裝備鑑定所' },
-        4: { progGain: 13, loc: '🎒 出征準備營' },
-        5: { progGain: 13, loc: '💼 契約祭壇' },
-        6: { progGain: 12, loc: '👑 榮耀殿堂' }
+        1: { progGain: 14, loc: '🏰 登錄公會', scoreGain: 16 },
+        2: { progGain: 14, loc: '📁 裝備盤點', scoreGain: 16 },
+        3: { progGain: 17, loc: '🛡️ 裝備鑑定所', scoreGain: 21 },
+        4: { progGain: 13, loc: '🎒 出征準備營', scoreGain: 16 },
+        5: { progGain: 13, loc: '💼 契約祭壇', scoreGain: 16 },
+        6: { progGain: 12, loc: '👑 榮耀殿堂', scoreGain: 0 }
     },
 
+    // 🌟 產生專屬記憶櫃鑰匙
     getStorageKey() {
         return 'hero_progress_' + this.config.uid;
     },
 
     init() {
         document.querySelectorAll('details').forEach(el => el.removeAttribute('open'));
+
+        // 🌟 自動為導覽列補上 ID，防止跳頁失憶
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            if (btn.href && !btn.href.includes('javascript')) {
+                const url = new URL(btn.href, window.location.href);
+                url.searchParams.set('uid', this.config.uid);
+                btn.href = url.toString();
+            }
+        });
 
         try {
             const saved = localStorage.getItem(this.getStorageKey());
@@ -216,31 +233,8 @@ const GameEngine = {
 
                 this.save();
                 this.updateUI(true);
-
-                if (res.data.isOverdue && !this.state.hasSeenDoomFlash) {
-                    this.triggerDoomFlash();
-                }
             }
         } catch (err) { console.error("同步失敗:", err); }
-    },
-
-    async triggerDoomFlash() {
-        if (document.getElementById('doom-flash-overlay')) return;
-        this.state.hasSeenDoomFlash = true; this.save();
-        const overlay = document.createElement('div');
-        overlay.id = 'doom-flash-overlay';
-        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; transition: background-color 0.1s;';
-        overlay.innerHTML = `<div id="doom-text-main" style="color:white; font-size:48px; font-weight:900; text-shadow: 2px 2px 10px rgba(0,0,0,0.8); margin-bottom: 20px; opacity: 0; transition: opacity 0.1s;">⚠️ 警告！！</div><div id="doom-text-sub" style="color:#ffcccc; font-size:20px; font-weight:bold; max-width: 80%; line-height: 1.5; display: none;">進度嚴重落後，冒險積分已遭系統扣減，請立即補件！</div><button id="doom-btn-close" style="margin-top: 30px; padding: 12px 24px; font-size: 18px; font-weight: bold; background-color: #fbbf24; border: none; border-radius: 8px; cursor: pointer; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">我知道了</button>`;
-        document.body.appendChild(overlay);
-        const sleep = ms => new Promise(r => setTimeout(r, ms));
-        const mainText = document.getElementById('doom-text-main');
-        const subText = document.getElementById('doom-text-sub');
-        const closeBtn = document.getElementById('doom-btn-close');
-        for (let i = 0; i < 6; i++) { overlay.style.backgroundColor = (i % 2 === 0) ? 'rgba(255, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.9)'; await sleep(150); }
-        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.85)'; await sleep(300);
-        for (let i = 0; i < 3; i++) { mainText.style.opacity = '1'; await sleep(400); mainText.style.opacity = '0'; await sleep(200); }
-        subText.style.display = 'block'; closeBtn.style.display = 'block';
-        closeBtn.onclick = () => { overlay.remove(); };
     },
 
     flashElement(id) {
@@ -275,25 +269,6 @@ const GameEngine = {
         return false;
     },
 
-    unlock(event, id, action, title, scoreGain) {
-        if (typeof title === 'number') {
-            scoreGain = title;
-        }
-        if (this.state.achievements.includes(id)) return;
-        
-        this.state.achievements.push(id);
-        this.save();
-        
-        if (scoreGain > 0) {
-            this.state.score += scoreGain;
-            this.state.scoreDetails.base += scoreGain;
-            this.createFloatingText(event, `+${scoreGain}`);
-            
-            fetch(`${this.config.apiUrl}?action=updateScore&uid=${encodeURIComponent(this.config.uid)}&field=${encodeURIComponent(id)}&score=${encodeURIComponent(scoreGain)}`);
-            setTimeout(() => { this.updateUI(true); }, 1000);
-        }
-    },
-
     toggleTrial5Score(event, id) {
         const isChecked = event.target.checked;
         const gain = 8;
@@ -307,7 +282,8 @@ const GameEngine = {
             this.state.score -= gain;
             this.state.scoreDetails.base -= gain;
         }
-        this.save(); this.updateUI(true);
+        this.save(); 
+        this.updateUI(true);
     },
 
     createFloatingText(e, text) {
@@ -435,7 +411,7 @@ const GameEngine = {
         
         if (!dateVal || !reasonVal) { alert("請填寫預計日期與改期原因！"); return; }
         
-        const confirmLock = confirm("確定要送出改期申請嗎？這將會累計扣除積分！");
+        const confirmLock = confirm("確定要送出改期申請嗎？");
         if (!confirmLock) return;
 
         const parts = dateVal.split('-');
@@ -487,6 +463,11 @@ const GameEngine = {
         if (detailsBlock) { detailsBlock.removeAttribute('open'); }
         
         this.updateButtonStyles();
+
+        // 🌟 嚴格綁定：只有提交任務才會飄出加分數字，並送往雲端！
+        if (tData.scoreGain > 0 && event) {
+            this.createFloatingText(event, `+${tData.scoreGain}`);
+        }
 
         fetch(`${this.config.apiUrl}?action=completeTrial&uid=${encodeURIComponent(this.config.uid)}&trialNum=${trialNum}`)
             .then(() => { this.syncWithBackend(); });
@@ -579,7 +560,6 @@ const GameEngine = {
         if (withFirework) { setTimeout(render, 1500); } else { render(); }
     },
 
-    // 🌟 更新封印與強制打勾狀態
     updateButtonStyles() {
         const lockedTexts = {
             1: "🔒 啟程點・已封印",
@@ -599,7 +579,7 @@ const GameEngine = {
             const block = document.getElementById(`detail-trial-${n}`);
             if (!btn || !block) continue;
 
-            // 🌟 封印狀態：強制打滿勾勾並鎖定
+            // 🌟 封印狀態：強力鎖定並自動打滿勾勾
             if (this.state.currentTrial >= n) {
                 btn.disabled = true;
                 btn.innerText = lockedTexts[n];
@@ -608,7 +588,7 @@ const GameEngine = {
                 
                 block.querySelectorAll('input').forEach(i => {
                     if (i.type === 'checkbox') {
-                        i.checked = true; // 強制打滿勾勾
+                        i.checked = true; 
                     }
                     i.disabled = true;
                     if (i.type === 'checkbox' || i.type === 'radio' || i.type === 'file') {

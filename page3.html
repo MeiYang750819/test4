@@ -20,7 +20,6 @@ white-space: normal !important;
 color: #b0b0b0; 
 }
 
-/* 🎯 任務目標顏色設定為 #cccccc */
 .task-target {
 color: #cccccc; 
 font-weight: bold;
@@ -51,7 +50,6 @@ display: inline-block;
 margin-left: 5px;
 }
 
-/* 超連結樣式優化 */
 .external-link {
 color: #8ab4f8;
 text-decoration: underline;
@@ -74,9 +72,14 @@ margin: 20px 0;
 }
 
 .tracking-header { text-align: center; display: block; margin-bottom: 15px; font-weight: bold; color: #cccccc; }
-.date-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; gap: 10px; }
 
-.btn-lock { background: #232a35; color: rgba(255, 255, 255, 0.7); border: 1px solid #4ade80; padding: 8px 12px; border-radius: 4px; font-size: 14px; cursor: pointer; flex: 1; transition: 0.3s; white-space: nowrap; }
+/* 手機版防擠壓彈性排版 */
+.date-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; margin-bottom: 15px; gap: 8px; }
+.date-row label { flex: 1 1 100%; margin-bottom: 4px; font-size: 14px; }
+.date-row input[type="date"], .date-row input[type="text"] { flex: 1; min-width: 130px; }
+.date-row button.btn-lock { flex: 0 0 auto; width: 70px; }
+
+.btn-lock { background: #232a35; color: rgba(255, 255, 255, 0.7); border: 1px solid #4ade80; padding: 8px 12px; border-radius: 4px; font-size: 14px; cursor: pointer; transition: 0.3s; white-space: nowrap; }
 .btn-lock:hover { background: #4ade80; color: #000; }
 .btn-lock:disabled { opacity: 0.3; cursor: not-allowed; border-color: #555; color: #666; }
 
@@ -85,12 +88,6 @@ margin: 20px 0;
 .action-center { text-align: center; margin-top: 20px; }
 .btn-confirm { width: 100%; padding: 12px; background: #2d3748; color: #4ade80; font-weight: bold; font-size: 15px; border: 1px solid #4ade80; border-radius: 6px; cursor: pointer; letter-spacing: 1px; transition: all 0.3s ease; }
 
-@media (max-width: 480px) {
-.date-row input[type="date"], .date-row input[type="text"] { flex: 2.5; }
-.btn-lock { flex: 1; font-size: 13px; }
-}
-
-/* 🌟 新增：針對上傳按鈕的 CSS，完全融入原有風格 */
 .upload-section { margin-top: 10px; margin-bottom: 15px;}
 .upload-group { margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px;}
 .file-upload-btn { background: #232a35; color: #8ab4f8; border: 1px solid #8ab4f8; padding: 4px 10px; border-radius: 4px; font-size: 13px; cursor: pointer; transition: 0.3s; white-space: nowrap;}
@@ -116,7 +113,7 @@ margin: 20px 0;
 
 <nav class="nav-tabs" style="top: 180px;">
 <a href="index.html" class="tab-btn">📜 冒險指南</a>
-<a href="page2.html" class="tab-btn">🏹 鍛造秘笈</a>
+<a href="page2.html" class="tab-btn">🏹 鍛秘笈</a>
 <a href="javascript:void(0)" onclick="location.reload();" class="tab-btn active">⚔️ 勇者試煉</a>
 </nav>
 
@@ -151,9 +148,9 @@ margin: 20px 0;
 　　- 若無下列文件亦可直接確認
 </span>
 
-<label class="check-item"><input type="checkbox"> 台新國際商業銀行-實體存摺</label>
-<label class="check-item"><input type="checkbox"> 中餐證照</label>
-<label class="check-item"><input type="checkbox"> 西餐證照</label>
+<label class="check-item"><input type="checkbox" id="chk-t2-1"> 台新國際商業銀行-實體存摺</label>
+<label class="check-item"><input type="checkbox" id="chk-t2-2"> 中餐證照</label>
+<label class="check-item"><input type="checkbox" id="chk-t2-3"> 西餐證照</label>
 <label class="check-item"><input type="checkbox" id="chk-equip-other"> 其他：<input type="text" id="input-equip-other" class="text-input-field" placeholder="請輸入項目名稱"></label>
 
 <div class="action-center">
@@ -174,7 +171,7 @@ margin: 20px 0;
 
 <div class="upload-section">
     <div class="upload-group">
-        <label class="check-item" style="margin:0;"><input type="checkbox" class="chk-trial3" id="chk-exam-normal"> 一般勞工體格檢查表</label>
+        <label class="check-item" style="margin:0;"><input type="checkbox" class="chk-trial3" id="chk-exam-normal" onclick="return false;"> 一般勞工體格檢查表</label>
         <div style="display:flex; align-items:center; gap:5px;">
             <input type="file" id="file-exam-normal" style="display:none;" onchange="GameEngine.handleFileUpload(this, 'chk-exam-normal')">
             <button class="file-upload-btn" onclick="document.getElementById('file-exam-normal').click()">上傳</button>
@@ -183,7 +180,7 @@ margin: 20px 0;
     </div>
     
     <div class="upload-group">
-        <label class="check-item" style="margin:0;"><input type="checkbox" class="chk-trial3" id="chk-exam-food"> 食品從業人員體檢表</label>
+        <label class="check-item" style="margin:0;"><input type="checkbox" class="chk-trial3" id="chk-exam-food" onclick="return false;"> 食品從業人員體檢表</label>
         <div style="display:flex; align-items:center; gap:5px;">
             <input type="file" id="file-exam-food" style="display:none;" onchange="GameEngine.handleFileUpload(this, 'chk-exam-food')">
             <button class="file-upload-btn" onclick="document.getElementById('file-exam-food').click()">上傳</button>
@@ -191,17 +188,10 @@ margin: 20px 0;
         </div>
     </div>
 
-    <div class="upload-group">
-        <label class="check-item" style="margin:0;"><input type="checkbox" class="chk-trial3" id="chk-photo"> 兩吋照片電子檔</label>
-        <div style="display:flex; align-items:center; gap:5px;">
-            <input type="file" id="file-photo" style="display:none;" onchange="GameEngine.handleFileUpload(this, 'chk-photo')">
-            <button class="file-upload-btn" onclick="document.getElementById('file-photo').click()">上傳</button>
-            <span class="upload-status"></span>
-        </div>
-    </div>
+    <label class="check-item" style="margin-left: 10px; margin-bottom: 12px;"><input type="checkbox" class="chk-trial3" id="chk-photo"> 兩吋照片一張</label>
 
     <div class="upload-group">
-        <label class="check-item" style="margin:0;"><input type="checkbox" id="chk-nh"> 前份工作健保轉出證明 -新鮮人免附</label>
+        <label class="check-item" style="margin:0;"><input type="checkbox" id="chk-nh" onclick="return false;"> 前份工作健保轉出證明 -新鮮人免附</label>
         <div style="display:flex; align-items:center; gap:5px;">
             <input type="file" id="file-nh" style="display:none;" onchange="GameEngine.handleFileUpload(this, 'chk-nh')">
             <button class="file-upload-btn" onclick="document.getElementById('file-nh').click()">上傳</button>
@@ -210,7 +200,7 @@ margin: 20px 0;
     </div>
 
     <div class="upload-group">
-        <label class="check-item" style="margin:0;"><input type="checkbox" id="chk-leave"> 前份工作離職證明 -新鮮人免附</label>
+        <label class="check-item" style="margin:0;"><input type="checkbox" id="chk-leave" onclick="return false;"> 前份工作離職證明 -新鮮人免附</label>
         <div style="display:flex; align-items:center; gap:5px;">
             <input type="file" id="file-leave" style="display:none;" onchange="GameEngine.handleFileUpload(this, 'chk-leave')">
             <button class="file-upload-btn" onclick="document.getElementById('file-leave').click()">上傳</button>
@@ -223,8 +213,14 @@ margin: 20px 0;
 <span class="tracking-header">🕒 體檢進度追蹤</span>
 <div class="date-row"><label>預計體檢日期：</label><input type="date" id="input-exam-date"><button class="btn-lock" id="btn-lock-exam" onclick="GameEngine.lockDate('exam')">鎖定</button></div>
 <div class="date-row"><label>報告預計產出：</label><input type="date" id="input-result-date"><button class="btn-lock" id="btn-lock-result" onclick="GameEngine.lockDate('result')">鎖定</button></div>
-<div class="date-row"><label>申請更改日期：</label><input type="date" id="input-change-date"><button class="btn-lock" id="btn-lock-change" onclick="GameEngine.requestChange()">申請</button></div>
-<div class="lock-note">⚠️ 日期一經鎖定無法修改,若需調整請洽人資承辦.<br>⚠️ 無理由延期予以扣分,請再三確認後再動作.</div>
+<div class="date-row"><label>申請更改日期：</label><input type="date" id="input-change-date"></div>
+<div class="date-row"><label>申請更改原因：</label><input type="text" id="input-change-reason" class="text-input-field" style="flex:2;" placeholder="請簡述原因"><button class="btn-lock" id="btn-lock-change" onclick="GameEngine.requestChange()">送出</button></div>
+
+<div class="lock-note">
+⚠️ 日期一經鎖定無法修改,若需調整請洽人資承辦.<br>
+⚠️ 無理由延期予以扣分,請再三確認後再動作.<br>
+⚠️ 請確認資料全數備妥後,再按送出.
+</div>
 </div>
 
 <div class="action-center"><button class="btn-confirm" id="btn-trial-3" onclick="checkTrial3(event)">🚀 提交本關任務</button></div>
@@ -246,11 +242,11 @@ margin: 20px 0;
 📍 報到地點：<span class="info-highlight" id="dyn-apt-loc">等待公會發布...</span>
 </div>
 
-<label class="check-item"><input type="checkbox" class="chk-trial4"> 確認當日服裝儀容規範</label>
-<label class="check-item"><input type="checkbox" class="chk-trial4"> 五大正本文件夾已備妥</label>
-<label class="check-item"><input type="checkbox" class="chk-trial4"> 確認報到時間與地點</label>
+<label class="check-item"><input type="checkbox" class="chk-trial4" id="chk-t4-1"> 確認當日服裝儀容規範</label>
+<label class="check-item"><input type="checkbox" class="chk-trial4" id="chk-t4-2"> 五大正本文件夾已備妥</label>
+<label class="check-item"><input type="checkbox" class="chk-trial4" id="chk-t4-3"> 確認報到時間與地點</label>
 
-<div class="action-center"><button class="btn-confirm" id="btn-trial-4" onclick="checkTrial4(event)">🚀 提交本關任務</button></div>
+<div class="action-center"><button class="btn-confirm" id="btn-trial-4" onclick="GameEngine.completeTrial(event, 4)">🚀 提交本關任務</button></div>
 </div>
 </details>
 
@@ -318,8 +314,29 @@ if (typeof GameEngine !== 'undefined') { GameEngine.init(); }
 });
 
 function checkTrial1(e) { if (!document.getElementById('chk-guide').checked || !document.getElementById('chk-forge').checked || !document.getElementById('chk-risk').checked) { alert("⚠️ 勇主請注意\n必須勾選所有確認項目，才能推進！"); return; } GameEngine.completeTrial(e, 1); }
-function checkTrial3(e) { const chks = document.querySelectorAll('.chk-trial3'); let all = true; chks.forEach(c => { if(!c.checked) all = false; }); if (!all) { alert("⚠️ 勇主請注意\n請確實上傳【照片】及【兩項體檢表】，並勾選確認後才能推進！"); return; } GameEngine.completeTrial(e, 3); }
-function checkTrial4(e) { const chks = document.querySelectorAll('.chk-trial4'); let all = true; chks.forEach(c => { if(!c.checked) all = false; }); if (!all) { alert("⚠️ 勇主請注意\n必須勾選所有確認項目，才能推進！"); return; } GameEngine.completeTrial(e, 4); }
+
+// 🌟 強制檢查前兩個檔案必須完成上傳
+function checkTrial3(e) { 
+    const examNormal = document.getElementById('chk-exam-normal');
+    const examFood = document.getElementById('chk-exam-food');
+    
+    if (!examNormal.checked || !examFood.checked) { 
+        alert("⚠️ 勇者請注意：\n必須上傳體檢報告才能推進關卡！"); 
+        return; 
+    } 
+    
+    const chks = document.querySelectorAll('.chk-trial3'); 
+    let all = true; 
+    chks.forEach(c => { if(!c.checked) all = false; }); 
+    
+    if (!all) { 
+        alert("⚠️ 勇者請注意：\n必須勾選所有確認項目，才能推進！"); 
+        return; 
+    } 
+    
+    GameEngine.completeTrial(e, 3); 
+}
+
 function checkTrial5(e) { const chks = document.querySelectorAll('.chk-trial5'); let all = true; chks.forEach(c => { if(!c.checked) all = false; }); if (!all) { alert("⚠️ 勇主請注意\n必須勾選所有確認項目，才能推進！"); return; } GameEngine.completeTrial(e, 5); }
 
 function checkBankLogic(clickedEl, statusType) {
